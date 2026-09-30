@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SilentVoice X</title>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<style>
+:root{--bg:#07111f;--card:#0d1b2e;--cyan:#45e6ff;--violet:#8b5cf6;--pink:#ff4fa3;--text:#f7fbff;--muted:#9bb0c9;--good:#3ee6a0;--warn:#ffd166}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-rounded,system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at 10% 10%,#11284a 0,#07111f 45%,#050a12 100%);color:var(--text);min-height:100vh}
+.shell{max-width:1120px;margin:auto;padding:22px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}.brand h1{margin:0;font-size:clamp(28px,5vw,46px);letter-spacing:-1.5px}.brand h1 span{background:linear-gradient(90deg,var(--cyan),#a78bfa,var(--pink));-webkit-background-clip:text;color:transparent}.brand p{margin:5px 0 0;color:var(--muted);font-weight:650}.badge{padding:9px 13px;border:1px solid #244364;background:#0a1729;border-radius:999px;font-weight:800;font-size:13px}
+.tabs{display:flex;gap:8px;background:#091729;border:1px solid #193451;padding:6px;border-radius:18px;margin-bottom:18px}.tab{flex:1;border:0;border-radius:13px;padding:12px 14px;background:transparent;color:var(--muted);font-weight:850;cursor:pointer}.tab.active{background:linear-gradient(135deg,#17385b,#182650);color:white;box-shadow:0 0 22px #45e6ff1f}
+.page{display:none}.page.active{display:block}.grid{display:grid;grid-template-columns:1.4fr .9fr;gap:18px}.card{background:linear-gradient(160deg,#10213aee,#0a1627ee);border:1px solid #1c3a5d;border-radius:24px;padding:18px;box-shadow:0 20px 60px #0006}.cameraWrap{position:relative;aspect-ratio:4/3;background:#02060c;border-radius:19px;overflow:hidden;border:1px solid #25496c}.cameraWrap video,.cameraWrap canvas{position:absolute;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}.cameraWrap canvas{z-index:2}.privacy video{opacity:0}.privacy .privacyTag{display:block}.privacyTag{display:none;position:absolute;z-index:3;top:12px;left:12px;background:#0c2632cc;border:1px solid #37c9cb;color:#8ffcff;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:900}
+.statusRow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.pill{font-size:12px;font-weight:850;padding:7px 10px;border-radius:999px;background:#0c1a2d;border:1px solid #244260;color:var(--muted)}.pill.on{color:#88ffd3;border-color:#1f7b61}.controls{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.btn{border:0;border-radius:14px;padding:11px 15px;font-weight:900;cursor:pointer;color:white;background:#173554}.btn.primary{background:linear-gradient(135deg,#0ea5e9,#7c3aed)}.btn.hot{background:linear-gradient(135deg,#ff3f91,#8b5cf6)}.btn.ghost{background:#0b1a2c;border:1px solid #284663}.btn:disabled{opacity:.45;cursor:not-allowed}
+.detect{display:flex;flex-direction:column;min-height:100%}.smallcap{color:var(--muted);font-size:12px;font-weight:900;letter-spacing:1.3px}.word{font-size:clamp(42px,7vw,76px);font-weight:950;letter-spacing:-2px;margin:10px 0 4px;line-height:1}.conf{font-size:17px;font-weight:850;color:var(--cyan)}.ring{width:98px;height:98px;border-radius:50%;display:grid;place-items:center;margin:18px 0;background:conic-gradient(var(--cyan) 0deg,#16304a 0)}.ring:after{content:"";width:74px;height:74px;border-radius:50%;background:#0c1a2d}.ringText{position:absolute;font-weight:950}.sentence{margin-top:auto;padding:15px;border-radius:16px;background:#071321;border:1px solid #1d3855}.sentence .seq{color:#8bdff1;font-weight:800;font-size:13px}.sentence .natural{font-size:21px;font-weight:900;margin-top:7px}
+.formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.field label{display:block;color:var(--muted);font-size:12px;font-weight:850;margin:0 0 6px}.field input,.field select{width:100%;background:#071423;color:white;border:1px solid #294764;border-radius:12px;padding:11px 12px;font:inherit}.trainHero{text-align:center;padding:22px}.trainHero .rocket{font-size:52px}.progress{height:12px;border-radius:999px;background:#071321;overflow:hidden;border:1px solid #1b3652}.bar{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));transition:.2s}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}.stat{background:#091728;border:1px solid #1d3856;border-radius:18px;padding:16px}.stat .n{font-size:25px;font-weight:950}.stat .k{font-size:12px;color:var(--muted);font-weight:800;margin-top:3px}.log{background:#050c15;border:1px solid #18304c;border-radius:14px;padding:12px;min-height:110px;white-space:pre-wrap;color:#a8c1d9;font:12px ui-monospace,SFMono-Regular,Menlo,monospace;max-height:220px;overflow:auto}.note{font-size:12px;color:var(--muted);line-height:1.55}.spark{box-shadow:0 0 0 1px #43d9ff55,0 0 28px #45e6ff28}.flash{animation:flash .55s ease}@keyframes flash{50%{box-shadow:0 0 38px #ff4fa388;border-color:#ff7bbe}} 
+@media(max-width:800px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.top{align-items:flex-start;flex-direction:column}.formgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="top"><div class="brand"><h1>✋ <span>SilentVoice X</span></h1><p>AI that turns signs into speech</p></div><div class="badge">GRADE 10 • AI PROJECT</div></div>
+  <div class="tabs">
+    <button class="tab active" data-page="translate">✋ Translate</button>
+    <button class="tab" data-page="train">🧠 Train AI</button>
+    <button class="tab" data-page="results">📊 My Results</button>
+  </div>
+
+  <section id="translate" class="page active">
+    <div class="grid">
+      <div class="card">
+        <div id="cameraWrap" class="cameraWrap">
+          <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas><div class="privacyTag">🔒 PRIVACY MODE</div>
+        </div>
+        <div class="statusRow"><span id="camStatus" class="pill">● Camera off</span><span id="handStatus" class="pill">● Waiting for hand</span><span id="modelStatus" class="pill">● Model not trained</span></div>
+        <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="privacyBtn" class="btn ghost">🔒 Privacy</button><button id="clearBtn" class="btn ghost">Clear</button></div>
+      </div>
+      <div id="detectCard" class="card detect spark">
+        <div class="smallcap">AI DETECTED</div><div id="word" class="word">READY</div><div id="conf" class="conf">Train the AI first</div>
+        <div style="position:relative;width:98px"><div id="ring" class="ring"></div><div id="ringText" class="ringText" style="inset:38px 0;text-align:center">0%</div></div>
+        <div class="sentence"><div id="seq" class="seq">SIGN SEQUENCE: —</div><div id="natural" class="natural">“Your phrase will appear here.”</div></div>
+        <div class="controls"><button id="speakBtn" class="btn hot">🔊 SPEAK</button><button id="addBtn" class="btn primary">＋ Add Sign</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="train" class="page">
+    <div class="grid">
+      <div class="card">
+        <div class="smallcap">DATASET LAB</div><h2>Teach SilentVoice a sign</h2>
+        <div class="formgrid">
+          <div class="field"><label>Participant ID</label><input id="participant" value="P001"></div>
+          <div class="field"><label>Sign label</label><input id="label" value="HELLO" maxlength="24"></div>
+          <div class="field"><label>Hold-out participant for final test</label><input id="holdout" value="P003"></div>
+          <div class="field"><label>Unknown threshold</label><input id="threshold" type="number" min=".5" max=".99" step=".01" value=".75"></div>
+        </div>
+        <div class="controls"><button id="recordBtn" class="btn hot">● Record 1 sample</button><button id="deleteDataBtn" class="btn ghost">Delete all data</button></div>
+        <p class="note">Each sample records 24 landmark frames. For a useful test, collect at least 8–12 samples per sign from P001/P002, then use P003 only as an unseen test signer.</p>
+        <div id="sampleLog" class="log">No samples yet.</div>
+      </div>
+      <div class="card trainHero">
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><p class="note">No Python. No uploads. Training data stays in this browser unless you export it.</p>
+        <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
+        <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
+        <p id="trainText" class="note">Waiting for data.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="results" class="page">
+    <div class="card">
+      <div class="smallcap">MY SCIENCE RESULTS</div><h2>Real measurements only</h2>
+      <div class="stats">
+        <div class="stat"><div id="sampleCount" class="n">0</div><div class="k">RECORDED SAMPLES</div></div>
+        <div class="stat"><div id="classCount" class="n">0</div><div class="k">SIGN CLASSES</div></div>
+        <div class="stat"><div id="valAcc" class="n">—</div><div class="k">VALIDATION ACCURACY</div></div>
+        <div class="stat"><div id="holdAcc" class="n">—</div><div class="k">UNSEEN SIGNER ACCURACY</div></div>
+      </div>
+      <h3>Experiment notes</h3><div id="resultsLog" class="log">Train a model to generate real results.</div>
+      <p class="note">Competition rule for this prototype: never report an accuracy number until it is measured. The hold-out participant is excluded from training and used only for signer-independent testing.</p>
+    </div>
+  </section>
+</div>
+
+<script type="module">
+import {HandLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";
+const $=id=>document.getElementById(id), sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let handLandmarker,stream,ctx,drawing,model=null,labels=[],dataset=JSON.parse(localStorage.getItem("svx-data")||"[]");
+let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0;
+const SEQ=24, FEAT=126;
+
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab,.page").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.page).classList.add("active");updateStats()});
+
+function logSamples(){
+ const counts={}; dataset.forEach(s=>{const k=s.participant+" • "+s.label;counts[k]=(counts[k]||0)+1});
+ $("sampleLog").textContent=dataset.length?Object.entries(counts).map(([k,v])=>k+": "+v+" samples").join("\n"):"No samples yet.";
+ updateStats();
+}
+function updateStats(){
+ $("sampleCount").textContent=dataset.length;
+ $("classCount").textContent=new Set(dataset.map(x=>x.label)).size;
+}
+function normalizeHand(lms){
+ const w=lms[0], pts=lms.map(p=>[p.x-w.x,p.y-w.y,p.z-w.z]);
+ let scale=0;pts.forEach(p=>scale=Math.max(scale,Math.hypot(p[0],p[1],p[2])));scale=scale||1;
+ return pts.flatMap(p=>p.map(v=>v/scale));
+}
+function featureFrom(result){
+ const out=new Array(FEAT).fill(0);
+ if(!result.landmarks?.length)return out;
+ result.landmarks.forEach((lms,i)=>{
+  const hand=result.handedness?.[i]?.[0]?.categoryName||"Right";
+  const f=normalizeHand(lms),off=hand==="Left"?0:63;
+  for(let j=0;j<63;j++)out[off+j]=f[j];
+ });
+ return out;
+}
+async function initLandmarker(){
+ if(handLandmarker)return;
+ const vision=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
+ handLandmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",delegate:"GPU"},runningMode:"VIDEO",numHands:2,minHandDetectionConfidence:.55,minHandPresenceConfidence:.55,minTrackingConfidence:.5});
+}
+async function startCamera(){
+ await initLandmarker();
+ stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:960},height:{ideal:720},facingMode:"user"},audio:false});
+ $("video").srcObject=stream; await $("video").play();
+ $("canvas").width=$("video").videoWidth;$("canvas").height=$("video").videoHeight;ctx=$("canvas").getContext("2d");drawing=new DrawingUtils(ctx);
+ $("camStatus").textContent="● Camera active";$("camStatus").classList.add("on");loop();
+}
+async function loop(){
+ if(!stream)return;
+ const now=performance.now(),r=handLandmarker.detectForVideo($("video"),now);ctx.clearRect(0,0,$("canvas").width,$("canvas").height);
+ if(r.landmarks?.length){$("handStatus").textContent="● Hand detected";$("handStatus").classList.add("on");for(const l of r.landmarks){drawing.drawConnectors(l,HandLandmarker.HAND_CONNECTIONS,{color:"#45e6ff",lineWidth:4});drawing.drawLandmarks(l,{color:"#ff4fa3",radius:3})}}
+ else{$("handStatus").textContent="● Waiting for hand";$("handStatus").classList.remove("on")}
+ const f=featureFrom(r);
+ if(recording && r.landmarks?.length){recordFrames.push(f);if(recordFrames.length>=SEQ){recording=false;const item={participant:$("participant").value.trim()||"P001",label:$("label").value.trim().toUpperCase()||"SIGN",seq:recordFrames.slice(0,SEQ)};dataset.push(item);localStorage.setItem("svx-data",JSON.stringify(dataset));$("recordBtn").textContent="● Record 1 sample";logSamples()}}
+ if(model && r.landmarks?.length){liveBuffer.push(f);if(liveBuffer.length>SEQ)liveBuffer.shift();if(liveBuffer.length===SEQ && now-lastPredict>450){lastPredict=now;predict(liveBuffer)}}
+ requestAnimationFrame(loop);
+}
+function setPrediction(name,conf){
+ currentPrediction=name;currentConfidence=conf;$("word").textContent=name;$("conf").textContent=name==="UNKNOWN"?"Not confident enough to guess":Math.round(conf*1000)/10+"% confidence";
+ const pct=Math.round(conf*100);$("ringText").textContent=pct+"%";$("ring").style.background="conic-gradient(#45e6ff "+pct*3.6+"deg,#16304a 0)";
+ $("detectCard").classList.remove("flash");void $("detectCard").offsetWidth;$("detectCard").classList.add("flash");
+}
+async function predict(seq){
+ const x=tf.tensor(seq,[1,SEQ,FEAT]);const y=model.predict(x);const p=Array.from(await y.data());x.dispose();y.dispose();
+ let idx=p.indexOf(Math.max(...p)),conf=p[idx],th=parseFloat($("threshold").value)||.75;
+ setPrediction(conf>=th?labels[idx]:"UNKNOWN",conf);
+}
+$("startBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
+$("privacyBtn").onclick=()=>$("cameraWrap").classList.toggle("privacy");
+$("clearBtn").onclick=()=>{phrase=[];updatePhrase();setPrediction("READY",0)};
+$("addBtn").onclick=()=>{if(currentPrediction!=="READY"&&currentPrediction!=="UNKNOWN"){phrase.push(currentPrediction);updatePhrase()}};
+$("speakBtn").onclick=()=>{const t=phrase.length?phrase.join(" ").toLowerCase():currentPrediction.toLowerCase();if(t&&t!=="ready"&&t!=="unknown"){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t))}};
+function updatePhrase(){$("seq").textContent="SIGN SEQUENCE: "+(phrase.length?phrase.join(" → "):"—");$("natural").textContent=phrase.length?"“"+phrase.join(" ").toLowerCase().replace(/^./,c=>c.toUpperCase())+".”":"“Your phrase will appear here.”"}
+
+$("recordBtn").onclick=async()=>{if(!stream){alert("Start the camera first.");return}if(recording)return;$("recordBtn").disabled=true;$("recordBtn").textContent="Get ready… 3";await sleep(700);$("recordBtn").textContent="Get ready… 2";await sleep(700);$("recordBtn").textContent="Get ready… 1";await sleep(700);recordFrames=[];recording=true;$("recordBtn").disabled=false;$("recordBtn").textContent="Recording… move naturally"};
+$("deleteDataBtn").onclick=()=>{if(confirm("Delete all locally recorded training data?")){dataset=[];localStorage.removeItem("svx-data");logSamples()}};
+
+function buildModel(n){
+ const m=tf.sequential();m.add(tf.layers.lstm({units:36,inputShape:[SEQ,FEAT],returnSequences:false}));m.add(tf.layers.dropout({rate:.22}));m.add(tf.layers.dense({units:24,activation:"relu"}));m.add(tf.layers.dense({units:n,activation:"softmax"}));m.compile({optimizer:tf.train.adam(.0015),loss:"sparseCategoricalCrossentropy",metrics:["accuracy"]});return m;
+}
+function tensors(items,labelList){
+ const xs=items.map(x=>x.seq),ys=items.map(x=>labelList.indexOf(x.label));return {x:tf.tensor3d(xs,[items.length,SEQ,FEAT]),y:tf.tensor1d(ys,"int32")};
+}
+async function evaluate(items){
+ if(!items.length)return null;const t=tensors(items,labels),pred=model.predict(t.x),pi=pred.argMax(-1),pv=Array.from(await pi.data()),yv=Array.from(await t.y.data());let c=0;yv.forEach((v,i)=>{if(v===pv[i])c++});t.x.dispose();t.y.dispose();pred.dispose();pi.dispose();return c/yv.length;
+}
+$("trainBtn").onclick=async()=>{
+ labels=[...new Set(dataset.map(x=>x.label))].sort(); if(labels.length<2){alert("Record at least 2 different sign labels first.");return}
+ const counts=Object.fromEntries(labels.map(l=>[l,dataset.filter(x=>x.label===l).length]));if(Math.min(...Object.values(counts))<4){alert("Collect at least 4 samples for every sign before training.");return}
+ const hold=$("holdout").value.trim();const trainAll=dataset.filter(x=>x.participant!==hold),test=dataset.filter(x=>x.participant===hold);
+ if(trainAll.length<8){alert("Not enough non-holdout training samples.");return}
+ const shuffled=tf.util.shuffle(trainAll.slice())||trainAll;const cut=Math.max(1,Math.floor(trainAll.length*.8)),tr=trainAll.slice(0,cut),va=trainAll.slice(cut);
+ if(model)model.dispose();model=buildModel(labels.length);const T=tensors(tr,labels),V=tensors(va,labels);
+ $("trainBtn").disabled=true;$("trainText").textContent="Training…";$("resultsLog").textContent="Training in browser…";
+ const hist=await model.fit(T.x,T.y,{epochs:35,batchSize:Math.min(8,tr.length),validationData:[V.x,V.y],shuffle:true,callbacks:{onEpochEnd:async(e,l)=>{$("bar").style.width=((e+1)/35*100)+"%";$("trainText").textContent="Epoch "+(e+1)+"/35 • acc "+((l.acc||l.accuracy||0)*100).toFixed(1)+"% • val "+((l.val_acc||l.val_accuracy||0)*100).toFixed(1)+"%";await tf.nextFrame()}}});
+ const val=await evaluate(va),held=await evaluate(test);$("valAcc").textContent=val==null?"—":(val*100).toFixed(1)+"%";$("holdAcc").textContent=held==null?"No data":(held*100).toFixed(1)+"%";
+ $("resultsLog").textContent="Classes: "+labels.join(", ")+"\nTrain samples: "+tr.length+"\nValidation samples: "+va.length+"\nHeld-out signer: "+hold+" ("+test.length+" samples)\nFinal validation accuracy: "+(val==null?"not measured":(val*100).toFixed(1)+"%")+"\nUnseen-signer accuracy: "+(held==null?"not measured":(held*100).toFixed(1)+"%");
+ $("modelStatus").textContent="● AI trained";$("modelStatus").classList.add("on");$("trainBtn").disabled=false;T.x.dispose();T.y.dispose();V.x.dispose();V.y.dispose();
+ try{await model.save("indexeddb://silentvoice-x");localStorage.setItem("svx-labels",JSON.stringify(labels))}catch(e){}
+};
+async function loadSaved(){try{model=await tf.loadLayersModel("indexeddb://silentvoice-x");labels=JSON.parse(localStorage.getItem("svx-labels")||"[]");if(labels.length){$("modelStatus").textContent="● Saved AI loaded";$("modelStatus").classList.add("on")}}catch(e){}}
+logSamples();loadSaved();
+</script>
+</body>
+</html>
