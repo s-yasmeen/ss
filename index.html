@@ -13,7 +13,7 @@
 .page{display:none}.page.active{display:block}.grid{display:grid;grid-template-columns:1.4fr .9fr;gap:18px}.card{background:linear-gradient(160deg,#10213aee,#0a1627ee);border:1px solid #1c3a5d;border-radius:24px;padding:18px;box-shadow:0 20px 60px #0006}.cameraWrap{position:relative;aspect-ratio:4/3;background:#02060c;border-radius:19px;overflow:hidden;border:1px solid #25496c}.cameraWrap video,.cameraWrap canvas{position:absolute;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}.cameraWrap canvas{z-index:2}.privacy video{opacity:0}.privacy .privacyTag{display:block}.privacyTag{display:none;position:absolute;z-index:3;top:12px;left:12px;background:#0c2632cc;border:1px solid #37c9cb;color:#8ffcff;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:900}
 .statusRow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.pill{font-size:12px;font-weight:850;padding:7px 10px;border-radius:999px;background:#0c1a2d;border:1px solid #244260;color:var(--muted)}.pill.on{color:#88ffd3;border-color:#1f7b61}.controls{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.btn{border:0;border-radius:14px;padding:11px 15px;font-weight:900;cursor:pointer;color:white;background:#173554}.btn.primary{background:linear-gradient(135deg,#0ea5e9,#7c3aed)}.btn.hot{background:linear-gradient(135deg,#ff3f91,#8b5cf6)}.btn.ghost{background:#0b1a2c;border:1px solid #284663}.btn:disabled{opacity:.45;cursor:not-allowed}
 .detect{display:flex;flex-direction:column;min-height:100%}.smallcap{color:var(--muted);font-size:12px;font-weight:900;letter-spacing:1.3px}.word{font-size:clamp(42px,7vw,76px);font-weight:950;letter-spacing:-2px;margin:10px 0 4px;line-height:1}.conf{font-size:17px;font-weight:850;color:var(--cyan)}.ring{width:98px;height:98px;border-radius:50%;display:grid;place-items:center;margin:18px 0;background:conic-gradient(var(--cyan) 0deg,#16304a 0)}.ring:after{content:"";width:74px;height:74px;border-radius:50%;background:#0c1a2d}.ringText{position:absolute;font-weight:950}.sentence{margin-top:auto;padding:15px;border-radius:16px;background:#071321;border:1px solid #1d3855}.sentence .seq{color:#8bdff1;font-weight:800;font-size:13px}.sentence .natural{font-size:21px;font-weight:900;margin-top:7px}
-.formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.field label{display:block;color:var(--muted);font-size:12px;font-weight:850;margin:0 0 6px}.field input,.field select{width:100%;background:#071423;color:white;border:1px solid #294764;border-radius:12px;padding:11px 12px;font:inherit}.trainHero{text-align:center;padding:22px}.trainHero .rocket{font-size:52px}.progress{height:12px;border-radius:999px;background:#071321;overflow:hidden;border:1px solid #1b3652}.bar{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));transition:.2s}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}.stat{background:#091728;border:1px solid #1d3856;border-radius:18px;padding:16px}.stat .n{font-size:25px;font-weight:950}.stat .k{font-size:12px;color:var(--muted);font-weight:800;margin-top:3px}.log{background:#050c15;border:1px solid #18304c;border-radius:14px;padding:12px;min-height:110px;white-space:pre-wrap;color:#a8c1d9;font:12px ui-monospace,SFMono-Regular,Menlo,monospace;max-height:220px;overflow:auto}.note{font-size:12px;color:var(--muted);line-height:1.55}.spark{box-shadow:0 0 0 1px #43d9ff55,0 0 28px #45e6ff28}.flash{animation:flash .55s ease}@keyframes flash{50%{box-shadow:0 0 38px #ff4fa388;border-color:#ff7bbe}} 
+.trainPreview{margin:12px 0 16px}.recordOverlay{position:absolute;z-index:4;inset:auto 14px 14px 14px;background:#06101ddd;border:1px solid #31506d;border-radius:14px;padding:10px 12px;font-size:13px;font-weight:900;color:#d9f8ff;backdrop-filter:blur(8px)}.recordOverlay.live{border-color:#ff4fa3;box-shadow:0 0 24px #ff4fa344}.formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.field label{display:block;color:var(--muted);font-size:12px;font-weight:850;margin:0 0 6px}.field input,.field select{width:100%;background:#071423;color:white;border:1px solid #294764;border-radius:12px;padding:11px 12px;font:inherit}.trainHero{text-align:center;padding:22px}.trainHero .rocket{font-size:52px}.progress{height:12px;border-radius:999px;background:#071321;overflow:hidden;border:1px solid #1b3652}.bar{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));transition:.2s}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}.stat{background:#091728;border:1px solid #1d3856;border-radius:18px;padding:16px}.stat .n{font-size:25px;font-weight:950}.stat .k{font-size:12px;color:var(--muted);font-weight:800;margin-top:3px}.log{background:#050c15;border:1px solid #18304c;border-radius:14px;padding:12px;min-height:110px;white-space:pre-wrap;color:#a8c1d9;font:12px ui-monospace,SFMono-Regular,Menlo,monospace;max-height:220px;overflow:auto}.note{font-size:12px;color:var(--muted);line-height:1.55}.spark{box-shadow:0 0 0 1px #43d9ff55,0 0 28px #45e6ff28}.flash{animation:flash .55s ease}@keyframes flash{50%{box-shadow:0 0 38px #ff4fa388;border-color:#ff7bbe}} 
 @media(max-width:800px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.top{align-items:flex-start;flex-direction:column}.formgrid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -48,6 +48,18 @@
     <div class="grid">
       <div class="card">
         <div class="smallcap">DATASET LAB</div><h2>Teach SilentVoice a sign</h2>
+        <div class="trainPreview">
+          <div id="trainCameraWrap" class="cameraWrap">
+            <video id="trainVideo" autoplay playsinline muted></video>
+            <canvas id="trainCanvas"></canvas>
+            <div id="recordOverlay" class="recordOverlay">Camera off — tap Start Camera</div>
+          </div>
+          <div class="statusRow">
+            <span id="trainCamStatus" class="pill">● Camera off</span>
+            <span id="trainHandStatus" class="pill">● Waiting for hand</span>
+          </div>
+          <div class="controls"><button id="trainStartBtn" class="btn primary">Start Camera</button></div>
+        </div>
         <div class="formgrid">
           <div class="field"><label>Participant ID</label><input id="participant" value="P001"></div>
           <div class="field"><label>Sign label</label><input id="label" value="HELLO" maxlength="24"></div>
@@ -85,8 +97,8 @@
 <script type="module">
 import {HandLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";
 const $=id=>document.getElementById(id), sleep=ms=>new Promise(r=>setTimeout(r,ms));
-let handLandmarker,stream,ctx,drawing,model=null,labels=[],dataset=JSON.parse(localStorage.getItem("svx-data")||"[]");
-let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0;
+let handLandmarker,stream,ctx,drawing,trainCtx,trainDrawing,model=null,labels=[],dataset=JSON.parse(localStorage.getItem("svx-data")||"[]");
+let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false;
 const SEQ=24, FEAT=126;
 
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab,.page").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.page).classList.add("active");updateStats()});
@@ -121,19 +133,57 @@ async function initLandmarker(){
  handLandmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",delegate:"GPU"},runningMode:"VIDEO",numHands:2,minHandDetectionConfidence:.55,minHandPresenceConfidence:.55,minTrackingConfidence:.5});
 }
 async function startCamera(){
+ if(stream) return;
  await initLandmarker();
  stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:960},height:{ideal:720},facingMode:"user"},audio:false});
- $("video").srcObject=stream; await $("video").play();
- $("canvas").width=$("video").videoWidth;$("canvas").height=$("video").videoHeight;ctx=$("canvas").getContext("2d");drawing=new DrawingUtils(ctx);
- $("camStatus").textContent="● Camera active";$("camStatus").classList.add("on");loop();
+ $("video").srcObject=stream;
+ $("trainVideo").srcObject=stream;
+ await Promise.all([$("video").play(),$("trainVideo").play()]);
+ $("canvas").width=$("video").videoWidth;$("canvas").height=$("video").videoHeight;
+ $("trainCanvas").width=$("trainVideo").videoWidth;$("trainCanvas").height=$("trainVideo").videoHeight;
+ ctx=$("canvas").getContext("2d");drawing=new DrawingUtils(ctx);
+ trainCtx=$("trainCanvas").getContext("2d");trainDrawing=new DrawingUtils(trainCtx);
+ $("camStatus").textContent="● Camera active";$("camStatus").classList.add("on");
+ $("trainCamStatus").textContent="● Camera active";$("trainCamStatus").classList.add("on");
+ $("recordOverlay").textContent="Camera ready — choose a sign and record";
+ loop();
 }
 async function loop(){
  if(!stream)return;
- const now=performance.now(),r=handLandmarker.detectForVideo($("video"),now);ctx.clearRect(0,0,$("canvas").width,$("canvas").height);
- if(r.landmarks?.length){$("handStatus").textContent="● Hand detected";$("handStatus").classList.add("on");for(const l of r.landmarks){drawing.drawConnectors(l,HandLandmarker.HAND_CONNECTIONS,{color:"#45e6ff",lineWidth:4});drawing.drawLandmarks(l,{color:"#ff4fa3",radius:3})}}
- else{$("handStatus").textContent="● Waiting for hand";$("handStatus").classList.remove("on")}
+ const now=performance.now(),r=handLandmarker.detectForVideo($("video"),now);
+ ctx.clearRect(0,0,$("canvas").width,$("canvas").height);
+ trainCtx.clearRect(0,0,$("trainCanvas").width,$("trainCanvas").height);
+ handVisible=!!r.landmarks?.length;
+ if(handVisible){
+   $("handStatus").textContent="● Hand detected";$("handStatus").classList.add("on");
+   $("trainHandStatus").textContent="● Hand detected";$("trainHandStatus").classList.add("on");
+   for(const l of r.landmarks){
+     drawing.drawConnectors(l,HandLandmarker.HAND_CONNECTIONS,{color:"#45e6ff",lineWidth:4});drawing.drawLandmarks(l,{color:"#ff4fa3",radius:3});
+     trainDrawing.drawConnectors(l,HandLandmarker.HAND_CONNECTIONS,{color:"#45e6ff",lineWidth:4});trainDrawing.drawLandmarks(l,{color:"#ff4fa3",radius:3});
+   }
+ } else {
+   $("handStatus").textContent="● Waiting for hand";$("handStatus").classList.remove("on");
+   $("trainHandStatus").textContent="● Waiting for hand";$("trainHandStatus").classList.remove("on");
+ }
  const f=featureFrom(r);
- if(recording && r.landmarks?.length){recordFrames.push(f);if(recordFrames.length>=SEQ){recording=false;const item={participant:$("participant").value.trim()||"P001",label:$("label").value.trim().toUpperCase()||"SIGN",seq:recordFrames.slice(0,SEQ)};dataset.push(item);localStorage.setItem("svx-data",JSON.stringify(dataset));$("recordBtn").textContent="● Record 1 sample";logSamples()}}
+ if(recording){
+   if(handVisible){
+     recordFrames.push(f);
+     $("recordOverlay").textContent="● RECORDING  "+recordFrames.length+"/"+SEQ+" frames — move naturally";
+     $("recordOverlay").classList.add("live");
+     if(recordFrames.length>=SEQ){
+       recording=false;
+       const item={participant:$("participant").value.trim()||"P001",label:$("label").value.trim().toUpperCase()||"SIGN",seq:recordFrames.slice(0,SEQ)};
+       dataset.push(item);localStorage.setItem("svx-data",JSON.stringify(dataset));
+       $("recordBtn").textContent="● Record another sample";
+       $("recordOverlay").textContent="✓ Sample saved — repeat naturally for the next sample";
+       $("recordOverlay").classList.remove("live");
+       logSamples();
+     }
+   } else {
+     $("recordOverlay").textContent="Recording paused — show your hand clearly";
+   }
+ }
  if(model && r.landmarks?.length){liveBuffer.push(f);if(liveBuffer.length>SEQ)liveBuffer.shift();if(liveBuffer.length===SEQ && now-lastPredict>450){lastPredict=now;predict(liveBuffer)}}
  requestAnimationFrame(loop);
 }
@@ -148,13 +198,28 @@ async function predict(seq){
  setPrediction(conf>=th?labels[idx]:"UNKNOWN",conf);
 }
 $("startBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
+$("trainStartBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
 $("privacyBtn").onclick=()=>$("cameraWrap").classList.toggle("privacy");
 $("clearBtn").onclick=()=>{phrase=[];updatePhrase();setPrediction("READY",0)};
 $("addBtn").onclick=()=>{if(currentPrediction!=="READY"&&currentPrediction!=="UNKNOWN"){phrase.push(currentPrediction);updatePhrase()}};
 $("speakBtn").onclick=()=>{const t=phrase.length?phrase.join(" ").toLowerCase():currentPrediction.toLowerCase();if(t&&t!=="ready"&&t!=="unknown"){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t))}};
 function updatePhrase(){$("seq").textContent="SIGN SEQUENCE: "+(phrase.length?phrase.join(" → "):"—");$("natural").textContent=phrase.length?"“"+phrase.join(" ").toLowerCase().replace(/^./,c=>c.toUpperCase())+".”":"“Your phrase will appear here.”"}
 
-$("recordBtn").onclick=async()=>{if(!stream){alert("Start the camera first.");return}if(recording)return;$("recordBtn").disabled=true;$("recordBtn").textContent="Get ready… 3";await sleep(700);$("recordBtn").textContent="Get ready… 2";await sleep(700);$("recordBtn").textContent="Get ready… 1";await sleep(700);recordFrames=[];recording=true;$("recordBtn").disabled=false;$("recordBtn").textContent="Recording… move naturally"};
+$("recordBtn").onclick=async()=>{
+ if(!stream){alert("Start the camera first so you can see yourself while recording.");return}
+ if(recording)return;
+ $("recordBtn").disabled=true;
+ for(const n of [3,2,1]){
+   $("recordBtn").textContent="Get ready… "+n;
+   $("recordOverlay").textContent="Recording starts in "+n+"…";
+   await sleep(700);
+ }
+ recordFrames=[];recording=true;
+ $("recordBtn").disabled=false;
+ $("recordBtn").textContent="Recording…";
+ $("recordOverlay").textContent=handVisible?"● RECORDING — move naturally":"Show your hand clearly";
+ $("recordOverlay").classList.add("live");
+};
 $("deleteDataBtn").onclick=()=>{if(confirm("Delete all locally recorded training data?")){dataset=[];localStorage.removeItem("svx-data");logSamples()}};
 
 function buildModel(n){
