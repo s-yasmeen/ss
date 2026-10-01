@@ -67,7 +67,7 @@
           <div class="field"><label>Unknown threshold</label><input id="threshold" type="number" min=".5" max=".99" step=".01" value=".75"></div>
         </div>
         <div class="controls"><button id="recordBtn" class="btn hot">● Record 1 sample</button><button id="deleteDataBtn" class="btn ghost">Delete all data</button></div>
-        <p class="note">Each sample records 24 landmark frames. For a useful test, collect at least 8–12 samples per sign from P001/P002, then use P003 only as an unseen test signer.</p>
+        <p class="note"><b>Important:</b> every participant should record the <b>same sign labels</b>. Example: P001 records HELLO, GOOD, HEART; P002 records HELLO, GOOD, HEART; P003 records HELLO, GOOD, HEART. Use P003 only as the unseen test signer.</p>
         <div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
@@ -223,7 +223,13 @@ $("recordBtn").onclick=async()=>{
 $("deleteDataBtn").onclick=()=>{if(confirm("Delete all locally recorded training data?")){dataset=[];localStorage.removeItem("svx-data");logSamples()}};
 
 function buildModel(n){
- const m=tf.sequential();m.add(tf.layers.lstm({units:36,inputShape:[SEQ,FEAT],returnSequences:false}));m.add(tf.layers.dropout({rate:.22}));m.add(tf.layers.dense({units:24,activation:"relu"}));m.add(tf.layers.dense({units:n,activation:"softmax"}));m.compile({optimizer:tf.train.adam(.0015),loss:"sparseCategoricalCrossentropy",metrics:["accuracy"]});return m;
+ const m=tf.sequential();
+ m.add(tf.layers.lstm({units:20,inputShape:[SEQ,FEAT],returnSequences:false}));
+ m.add(tf.layers.dropout({rate:.18}));
+ m.add(tf.layers.dense({units:16,activation:"relu"}));
+ m.add(tf.layers.dense({units:n,activation:"softmax"}));
+ m.compile({optimizer:tf.train.adam(.0015),loss:"sparseCategoricalCrossentropy",metrics:["accuracy"]});
+ return m;
 }
 function tensors(items,labelList){
  const xs=items.map(x=>x.seq),ys=items.map(x=>labelList.indexOf(x.label));return {x:tf.tensor3d(xs,[items.length,SEQ,FEAT]),y:tf.tensor1d(ys,"int32")};
@@ -232,18 +238,82 @@ async function evaluate(items){
  if(!items.length)return null;const t=tensors(items,labels),pred=model.predict(t.x),pi=pred.argMax(-1),pv=Array.from(await pi.data()),yv=Array.from(await t.y.data());let c=0;yv.forEach((v,i)=>{if(v===pv[i])c++});t.x.dispose();t.y.dispose();pred.dispose();pi.dispose();return c/yv.length;
 }
 $("trainBtn").onclick=async()=>{
- labels=[...new Set(dataset.map(x=>x.label))].sort(); if(labels.length<2){alert("Record at least 2 different sign labels first.");return}
- const counts=Object.fromEntries(labels.map(l=>[l,dataset.filter(x=>x.label===l).length]));if(Math.min(...Object.values(counts))<4){alert("Collect at least 4 samples for every sign before training.");return}
- const hold=$("holdout").value.trim();const trainAll=dataset.filter(x=>x.participant!==hold),test=dataset.filter(x=>x.participant===hold);
- if(trainAll.length<8){alert("Not enough non-holdout training samples.");return}
- const shuffled=tf.util.shuffle(trainAll.slice())||trainAll;const cut=Math.max(1,Math.floor(trainAll.length*.8)),tr=trainAll.slice(0,cut),va=trainAll.slice(cut);
- if(model)model.dispose();model=buildModel(labels.length);const T=tensors(tr,labels),V=tensors(va,labels);
- $("trainBtn").disabled=true;$("trainText").textContent="Training…";$("resultsLog").textContent="Training in browser…";
- const hist=await model.fit(T.x,T.y,{epochs:35,batchSize:Math.min(8,tr.length),validationData:[V.x,V.y],shuffle:true,callbacks:{onEpochEnd:async(e,l)=>{$("bar").style.width=((e+1)/35*100)+"%";$("trainText").textContent="Epoch "+(e+1)+"/35 • acc "+((l.acc||l.accuracy||0)*100).toFixed(1)+"% • val "+((l.val_acc||l.val_accuracy||0)*100).toFixed(1)+"%";await tf.nextFrame()}}});
- const val=await evaluate(va),held=await evaluate(test);$("valAcc").textContent=val==null?"—":(val*100).toFixed(1)+"%";$("holdAcc").textContent=held==null?"No data":(held*100).toFixed(1)+"%";
- $("resultsLog").textContent="Classes: "+labels.join(", ")+"\nTrain samples: "+tr.length+"\nValidation samples: "+va.length+"\nHeld-out signer: "+hold+" ("+test.length+" samples)\nFinal validation accuracy: "+(val==null?"not measured":(val*100).toFixed(1)+"%")+"\nUnseen-signer accuracy: "+(held==null?"not measured":(held*100).toFixed(1)+"%");
- $("modelStatus").textContent="● AI trained";$("modelStatus").classList.add("on");$("trainBtn").disabled=false;T.x.dispose();T.y.dispose();V.x.dispose();V.y.dispose();
- try{await model.save("indexeddb://silentvoice-x");localStorage.setItem("svx-labels",JSON.stringify(labels))}catch(e){}
+ let T=null,V=null;
+ try{
+   labels=[...new Set(dataset.map(x=>x.label))].sort();
+   if(labels.length<2){alert("Record at least 2 different sign labels first.");return}
+   const counts=Object.fromEntries(labels.map(l=>[l,dataset.filter(x=>x.label===l).length]));
+   if(Math.min(...Object.values(counts))<4){alert("Collect at least 4 samples for every sign before training.");return}
+   const hold=$("holdout").value.trim();
+   const trainAll=dataset.filter(x=>x.participant!==hold);
+   const test=dataset.filter(x=>x.participant===hold);
+   const trainLabels=new Set(trainAll.map(x=>x.label));
+   const testLabels=new Set(test.map(x=>x.label));
+   const missingTrain=labels.filter(l=>!trainLabels.has(l));
+   const missingTest=labels.filter(l=>!testLabels.has(l));
+   if(missingTrain.length){
+     alert("Training cannot start yet. These signs exist only in the held-out participant: "+missingTrain.join(", ")+". Record these same signs with P001/P002 too.");
+     return;
+   }
+   if(test.length && missingTest.length){
+     alert("For a valid unseen-signer test, "+hold+" must record every sign. Missing: "+missingTest.join(", "));
+     return;
+   }
+   const perLabelTrain=Object.fromEntries(labels.map(l=>[l,trainAll.filter(x=>x.label===l).length]));
+   if(Math.min(...Object.values(perLabelTrain))<4){alert("Each sign needs at least 4 training samples outside the hold-out participant.");return}
+
+   const shuffled=trainAll.slice(); tf.util.shuffle(shuffled);
+   const tr=[],va=[];
+   for(const l of labels){
+     const items=shuffled.filter(x=>x.label===l);
+     const nVal=Math.max(1,Math.floor(items.length*.2));
+     va.push(...items.slice(0,nVal));
+     tr.push(...items.slice(nVal));
+   }
+   if(model)model.dispose();
+   model=buildModel(labels.length);
+   T=tensors(tr,labels);V=tensors(va,labels);
+   $("trainBtn").disabled=true;
+   $("bar").style.width="1%";
+   $("trainText").textContent="Preparing TensorFlow.js…";
+   $("resultsLog").textContent="Training in browser…";
+   await tf.nextFrame();
+
+   const EPOCHS=18;
+   await model.fit(T.x,T.y,{
+     epochs:EPOCHS,
+     batchSize:Math.min(6,tr.length),
+     validationData:[V.x,V.y],
+     shuffle:true,
+     callbacks:{
+       onTrainBegin:async()=>{$("trainText").textContent="Training started…";await tf.nextFrame()},
+       onEpochEnd:async(e,l)=>{
+         const acc=(l.acc??l.accuracy??0)*100;
+         const vacc=(l.val_acc??l.val_accuracy??0)*100;
+         $("bar").style.width=((e+1)/EPOCHS*100)+"%";
+         $("trainText").textContent="Epoch "+(e+1)+"/"+EPOCHS+" • accuracy "+acc.toFixed(1)+"% • validation "+vacc.toFixed(1)+"%";
+         await tf.nextFrame();
+       }
+     }
+   });
+
+   const val=await evaluate(va),held=await evaluate(test);
+   $("valAcc").textContent=val==null?"—":(val*100).toFixed(1)+"%";
+   $("holdAcc").textContent=held==null?"No data":(held*100).toFixed(1)+"%";
+   $("resultsLog").textContent="Classes: "+labels.join(", ")+"\nTrain samples: "+tr.length+"\nValidation samples: "+va.length+"\nHeld-out signer: "+hold+" ("+test.length+" samples)\nFinal validation accuracy: "+(val==null?"not measured":(val*100).toFixed(1)+"%")+"\nUnseen-signer accuracy: "+(held==null?"not measured":(held*100).toFixed(1)+"%");
+   $("modelStatus").textContent="● AI trained";$("modelStatus").classList.add("on");
+   $("trainText").textContent="✓ Training complete";
+   try{await model.save("indexeddb://silentvoice-x");localStorage.setItem("svx-labels",JSON.stringify(labels))}catch(e){}
+ }catch(e){
+   console.error(e);
+   $("trainText").textContent="Training error: "+e.message;
+   $("resultsLog").textContent="Training failed: "+e.message;
+   alert("Training stopped: "+e.message);
+ }finally{
+   $("trainBtn").disabled=false;
+   if(T){T.x.dispose();T.y.dispose()}
+   if(V){V.x.dispose();V.y.dispose()}
+ }
 };
 async function loadSaved(){try{model=await tf.loadLayersModel("indexeddb://silentvoice-x");labels=JSON.parse(localStorage.getItem("svx-labels")||"[]");if(labels.length){$("modelStatus").textContent="● Saved AI loaded";$("modelStatus").classList.add("on")}}catch(e){}}
 logSamples();loadSaved();
