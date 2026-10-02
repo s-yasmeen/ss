@@ -29,11 +29,11 @@
   <section id="translate" class="page active">
     <div class="grid">
       <div class="card">
-        <div id="cameraWrap" class="cameraWrap">
+        <div id="cameraWrap" class="cameraWrap privacy">
           <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas><div class="privacyTag">🔒 PRIVACY MODE</div>
         </div>
         <div class="statusRow"><span id="camStatus" class="pill">● Camera off</span><span id="handStatus" class="pill">● Waiting for hand</span><span id="modelStatus" class="pill">● Model not trained</span></div>
-        <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="privacyBtn" class="btn ghost">🔒 Privacy</button><button id="clearBtn" class="btn ghost">Clear</button></div>
+        <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="privacyBtn" class="btn ghost" disabled>🔒 Privacy ON</button><button id="clearBtn" class="btn ghost">Clear</button></div>
       </div>
       <div id="detectCard" class="card detect spark">
         <div class="smallcap">AI DETECTED</div><div id="word" class="word">READY</div><div id="conf" class="conf">Train the AI first</div>
@@ -49,9 +49,10 @@
       <div class="card">
         <div class="smallcap">DATASET LAB</div><h2>Teach SilentVoice a sign</h2>
         <div class="trainPreview">
-          <div id="trainCameraWrap" class="cameraWrap">
+          <div id="trainCameraWrap" class="cameraWrap privacy">
             <video id="trainVideo" autoplay playsinline muted></video>
             <canvas id="trainCanvas"></canvas>
+            <div class="privacyTag" style="display:block">🔒 PRIVACY MODE</div>
             <div id="recordOverlay" class="recordOverlay">Camera off — tap Start Camera</div>
           </div>
           <div class="statusRow">
@@ -71,7 +72,7 @@
         <div id="personSummary" class="personSummary"></div><div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 10 • TRANSLATE FIX</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 11 • PRIVACY ALWAYS ON</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -250,7 +251,8 @@ async function predict(seq){
 }
 $("startBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
 $("trainStartBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
-$("privacyBtn").onclick=()=>$("cameraWrap").classList.toggle("privacy");
+$("cameraWrap").classList.add("privacy");
+$("trainCameraWrap").classList.add("privacy");
 $("clearBtn").onclick=()=>{phrase=[];updatePhrase();setPrediction("READY",0)};
 $("addBtn").onclick=()=>{if(currentPrediction!=="READY"&&currentPrediction!=="UNKNOWN"){phrase.push(currentPrediction);updatePhrase()}};
 $("speakBtn").onclick=()=>{const t=phrase.length?phrase.join(" ").toLowerCase():currentPrediction.toLowerCase();if(t&&t!=="ready"&&t!=="unknown"){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t))}};
