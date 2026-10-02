@@ -39,7 +39,7 @@
         <div class="smallcap">AI DETECTED</div><div id="word" class="word">READY</div><div id="conf" class="conf">Train the AI first</div>
         <div style="position:relative;width:98px"><div id="ring" class="ring"></div><div id="ringText" class="ringText" style="inset:38px 0;text-align:center">0%</div></div>
         <div class="sentence"><div id="seq" class="seq">SIGN SEQUENCE: —</div><div id="natural" class="natural">“Your phrase will appear here.”</div></div>
-        <div class="controls"><button id="speakBtn" class="btn hot">🔊 SPEAK</button><button id="addBtn" class="btn primary">＋ Add Sign</button></div>
+        <div class="controls"><button id="speakBtn" class="btn hot">🔊 SPEAK</button><button id="addBtn" class="btn primary">＋ Add Sign</button></div><div class="note" style="margin-top:8px">SPEAK reads the detected sign, or the full phrase if signs have been added.</div>
       </div>
     </div>
   </section>
@@ -72,7 +72,7 @@
         <div id="personSummary" class="personSummary"></div><div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 11 • PRIVACY ALWAYS ON</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 12 • SPEECH FIX</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -99,7 +99,7 @@
 import {HandLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";
 const $=id=>document.getElementById(id), sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let handLandmarker,stream,ctx,drawing,trainCtx,trainDrawing,model=null,labels=[],dataset=JSON.parse(localStorage.getItem("svx-data")||"[]");
-let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false;
+let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[];
 const SEQ=24, FEAT=126;
 
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab,.page").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.page).classList.add("active");updateStats()});
@@ -255,7 +255,73 @@ $("cameraWrap").classList.add("privacy");
 $("trainCameraWrap").classList.add("privacy");
 $("clearBtn").onclick=()=>{phrase=[];updatePhrase();setPrediction("READY",0)};
 $("addBtn").onclick=()=>{if(currentPrediction!=="READY"&&currentPrediction!=="UNKNOWN"){phrase.push(currentPrediction);updatePhrase()}};
-$("speakBtn").onclick=()=>{const t=phrase.length?phrase.join(" ").toLowerCase():currentPrediction.toLowerCase();if(t&&t!=="ready"&&t!=="unknown"){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t))}};
+function refreshVoices(){
+ if(!("speechSynthesis" in window)) return;
+ speechVoices=window.speechSynthesis.getVoices()||[];
+}
+refreshVoices();
+if("speechSynthesis" in window && "onvoiceschanged" in window.speechSynthesis){
+ window.speechSynthesis.onvoiceschanged=refreshVoices;
+}
+function chooseEnglishVoice(){
+ refreshVoices();
+ return speechVoices.find(v=>/^en[-_]US/i.test(v.lang))
+   || speechVoices.find(v=>/^en[-_]GB/i.test(v.lang))
+   || speechVoices.find(v=>/^en/i.test(v.lang))
+   || speechVoices[0]
+   || null;
+}
+async function speakText(text){
+ text=(text||"").trim();
+ if(!text || text.toLowerCase()==="ready" || text.toLowerCase()==="unknown"){
+   alert("Recognize a trained sign first, or add signs to a phrase.");
+   return;
+ }
+ if(!("speechSynthesis" in window)){
+   alert("Speech is not supported in this browser. Open SilentVoice X in Chrome.");
+   return;
+ }
+ const btn=$("speakBtn");
+ try{
+   window.speechSynthesis.cancel();
+   if(window.speechSynthesis.paused) window.speechSynthesis.resume();
+   await sleep(120);
+   currentUtterance=new SpeechSynthesisUtterance(text);
+   currentUtterance.lang="en-US";
+   currentUtterance.rate=0.92;
+   currentUtterance.pitch=1.0;
+   currentUtterance.volume=1.0;
+   const voice=chooseEnglishVoice();
+   if(voice) currentUtterance.voice=voice;
+   btn.disabled=true;
+   btn.textContent="🔊 SPEAKING…";
+   currentUtterance.onend=()=>{
+     btn.disabled=false;
+     btn.textContent="🔊 SPEAK";
+     currentUtterance=null;
+   };
+   currentUtterance.onerror=(e)=>{
+     btn.disabled=false;
+     btn.textContent="🔊 SPEAK";
+     currentUtterance=null;
+     if(e.error!=="interrupted" && e.error!=="canceled"){
+       alert("Voice could not play. Check your phone media volume and try again.");
+     }
+   };
+   window.speechSynthesis.speak(currentUtterance);
+   setTimeout(()=>{
+     if(window.speechSynthesis.paused) window.speechSynthesis.resume();
+   },300);
+ }catch(e){
+   btn.disabled=false;
+   btn.textContent="🔊 SPEAK";
+   alert("Voice could not play: "+e.message);
+ }
+}
+$("speakBtn").onclick=()=>{
+ const text=phrase.length?phrase.join(" "):currentPrediction;
+ speakText(text);
+};
 function updatePhrase(){$("seq").textContent="SIGN SEQUENCE: "+(phrase.length?phrase.join(" → "):"—");$("natural").textContent=phrase.length?"“"+phrase.join(" ").toLowerCase().replace(/^./,c=>c.toUpperCase())+".”":"“Your phrase will appear here.”"}
 
 $("recordBtn").onclick=async()=>{
