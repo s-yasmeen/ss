@@ -231,14 +231,26 @@ function buildModel(n){
  m.add(tf.layers.dropout({rate:.15}));
  m.add(tf.layers.dense({units:20,activation:"relu"}));
  m.add(tf.layers.dense({units:n,activation:"softmax"}));
- m.compile({optimizer:tf.train.adam(.001),loss:"sparseCategoricalCrossentropy",metrics:["accuracy"]});
+ m.compile({optimizer:tf.train.adam(.001),loss:"categoricalCrossentropy",metrics:["accuracy"]});
  return m;
 }
 function tensors(items,labelList){
- const xs=items.map(x=>x.seq),ys=items.map(x=>labelList.indexOf(x.label));return {x:tf.tensor3d(xs,[items.length,SEQ,FEAT]),y:tf.tensor1d(ys,"int32")};
+ const xs=items.map(x=>x.seq);
+ const ids=items.map(x=>labelList.indexOf(x.label));
+ const x=tf.tensor3d(xs,[items.length,SEQ,FEAT],"float32");
+ const idTensor=tf.tensor1d(ids,"int32");
+ const y=tf.oneHot(idTensor,labelList.length).toFloat();
+ idTensor.dispose();
+ return {x,y};
 }
 async function evaluate(items){
- if(!items.length)return null;const t=tensors(items,labels),pred=model.predict(t.x),pi=pred.argMax(-1),pv=Array.from(await pi.data()),yv=Array.from(await t.y.data());let c=0;yv.forEach((v,i)=>{if(v===pv[i])c++});t.x.dispose();t.y.dispose();pred.dispose();pi.dispose();return c/yv.length;
+ if(!items.length)return null;
+ const t=tensors(items,labels),pred=model.predict(t.x);
+ const pi=pred.argMax(-1), yi=t.y.argMax(-1);
+ const pv=Array.from(await pi.data()), yv=Array.from(await yi.data());
+ let correct=0;yv.forEach((v,i)=>{if(v===pv[i])correct++});
+ t.x.dispose();t.y.dispose();pred.dispose();pi.dispose();yi.dispose();
+ return correct/yv.length;
 }
 $("trainBtn").onclick=async()=>{
  let T=null,V=null;
@@ -265,7 +277,7 @@ $("trainBtn").onclick=async()=>{
    const perLabelTrain=Object.fromEntries(labels.map(l=>[l,trainAll.filter(x=>x.label===l).length]));
    if(Math.min(...Object.values(perLabelTrain))<4){alert("Each sign needs at least 4 training samples outside the hold-out participant.");return}
 
-   $("trainText").textContent="Checking browser AI engine…";
+   $("trainText").textContent="Checking browser AI engine and labels…";
    $("bar").style.width="1%";
    await tf.ready();
    try{
