@@ -32,7 +32,7 @@
         <div id="cameraWrap" class="cameraWrap privacy">
           <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas><div class="privacyTag">🔒 PRIVACY MODE</div>
         </div>
-        <div class="statusRow"><span id="camStatus" class="pill">● Camera off</span><span id="handStatus" class="pill">● Waiting for hand</span><span id="modelStatus" class="pill">● Model not trained</span><span class="pill on">🔒 Privacy always on</span></div>
+        <div class="statusRow"><span id="camStatus" class="pill">● Camera off</span><span id="handStatus" class="pill">● Waiting for hand</span><span id="modelStatus" class="pill">● Model not trained</span><span class="pill on">🔒 Privacy always on</span><span class="pill on">🔊 Auto-speak ≥90%</span></div>
         <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="privacyBtn" class="btn ghost" disabled>🔒 Privacy ON</button><button id="clearBtn" class="btn ghost">Clear</button></div>
       </div>
       <div id="detectCard" class="card detect spark">
@@ -72,7 +72,7 @@
         <div id="personSummary" class="personSummary"></div><div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 13 • LIVE RECOGNITION FIX</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 14 • AUTO SPEAK 90%</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -99,7 +99,7 @@
 import {HandLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";
 const $=id=>document.getElementById(id), sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let handLandmarker,stream,ctx,drawing,trainCtx,trainDrawing,model=null,labels=[],dataset=JSON.parse(localStorage.getItem("svx-data")||"[]");
-let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[], inferenceBusy=false, inferenceErrors=0;
+let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[], inferenceBusy=false, inferenceErrors=0, autoSpeakLastLabel="", autoSpeakArmed=true;
 const SEQ=24, FEAT=126;
 
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab,.page").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.page).classList.add("active");updateStats()});
@@ -256,9 +256,28 @@ async function loop(){
  requestAnimationFrame(loop);
 }
 function setPrediction(name,conf){
- currentPrediction=name;currentConfidence=conf;$("word").textContent=name;$("conf").textContent=name==="UNKNOWN"?"Not confident enough to guess":Math.round(conf*1000)/10+"% confidence";
- const pct=Math.round(conf*100);$("ringText").textContent=pct+"%";$("ring").style.background="conic-gradient(#45e6ff "+pct*3.6+"deg,#16304a 0)";
- $("detectCard").classList.remove("flash");void $("detectCard").offsetWidth;$("detectCard").classList.add("flash");
+ currentPrediction=name;
+ currentConfidence=conf;
+ $("word").textContent=name;
+ $("conf").textContent=name==="UNKNOWN"?"Not confident enough to guess":Math.round(conf*1000)/10+"% confidence";
+ const pct=Math.round(conf*100);
+ $("ringText").textContent=pct+"%";
+ $("ring").style.background="conic-gradient(#45e6ff "+pct*3.6+"deg,#16304a 0)";
+ $("detectCard").classList.remove("flash");
+ void $("detectCard").offsetWidth;
+ $("detectCard").classList.add("flash");
+
+ // Auto-speak only for a confident accepted sign.
+ if(name!=="READY" && name!=="UNKNOWN" && conf>=0.90){
+   if(autoSpeakArmed || autoSpeakLastLabel!==name){
+     autoSpeakLastLabel=name;
+     autoSpeakArmed=false;
+     speakText(name);
+   }
+ }else if(conf<0.80 || name==="UNKNOWN" || name==="READY"){
+   // Re-arm after the user changes/removes the gesture.
+   autoSpeakArmed=true;
+ }
 }
 async function predict(seq){
  if(!model || !labels.length) return;
@@ -288,7 +307,7 @@ $("startBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: 
 $("trainStartBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
 $("cameraWrap").classList.add("privacy");
 $("trainCameraWrap").classList.add("privacy");
-$("clearBtn").onclick=()=>{phrase=[];updatePhrase();setPrediction("READY",0)};
+$("clearBtn").onclick=()=>{phrase=[];autoSpeakArmed=true;autoSpeakLastLabel="";updatePhrase();setPrediction("READY",0)};
 $("addBtn").onclick=()=>{if(currentPrediction!=="READY"&&currentPrediction!=="UNKNOWN"){phrase.push(currentPrediction);updatePhrase()}};
 function refreshVoices(){
  if(!("speechSynthesis" in window)) return;
