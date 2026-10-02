@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SilentVoice X</title>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 <style>
 :root{--bg:#07111f;--card:#0d1b2e;--cyan:#45e6ff;--violet:#8b5cf6;--pink:#ff4fa3;--text:#f7fbff;--muted:#9bb0c9;--good:#3ee6a0;--warn:#ffd166}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,ui-rounded,system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at 10% 10%,#11284a 0,#07111f 45%,#050a12 100%);color:var(--text);min-height:100vh}
@@ -71,7 +71,7 @@
         <div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 7 • MOBILE FIX</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -236,11 +236,14 @@ function buildModel(n){
 }
 function tensors(items,labelList){
  const xs=items.map(x=>x.seq);
- const ids=items.map(x=>labelList.indexOf(x.label));
+ const yRows=items.map(item=>{
+   const row=new Array(labelList.length).fill(0);
+   const idx=labelList.indexOf(item.label);
+   if(idx>=0) row[idx]=1;
+   return row;
+ });
  const x=tf.tensor3d(xs,[items.length,SEQ,FEAT],"float32");
- const idTensor=tf.tensor1d(ids,"int32");
- const y=tf.oneHot(idTensor,labelList.length).toFloat();
- idTensor.dispose();
+ const y=tf.tensor2d(yRows,[items.length,labelList.length],"float32");
  return {x,y};
 }
 async function evaluate(items){
@@ -327,9 +330,9 @@ $("trainBtn").onclick=async()=>{
    try{await model.save("indexeddb://silentvoice-x");localStorage.setItem("svx-labels",JSON.stringify(labels))}catch(e){}
  }catch(e){
    console.error(e);
-   $("trainText").textContent="Training error: "+e.message;
+   $("trainText").textContent="Training error: "+e.message+" • TFJS "+tf.version.tfjs+" • "+tf.getBackend();
    $("resultsLog").textContent="Training failed: "+e.message;
-   alert("Training stopped: "+e.message);
+   alert("Training stopped: "+e.message+"\nTFJS "+tf.version.tfjs+" • backend "+tf.getBackend());
  }finally{
    $("trainBtn").disabled=false;
    if(T){T.x.dispose();T.y.dispose()}
