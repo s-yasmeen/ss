@@ -71,7 +71,7 @@
         <div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><p class="note">No Python. No uploads. Training data stays in this browser unless you export it.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -224,11 +224,14 @@ $("deleteDataBtn").onclick=()=>{if(confirm("Delete all locally recorded training
 
 function buildModel(n){
  const m=tf.sequential();
- m.add(tf.layers.lstm({units:20,inputShape:[SEQ,FEAT],returnSequences:false}));
- m.add(tf.layers.dropout({rate:.18}));
- m.add(tf.layers.dense({units:16,activation:"relu"}));
+ m.add(tf.layers.conv1d({filters:16,kernelSize:3,padding:"same",activation:"relu",inputShape:[SEQ,FEAT]}));
+ m.add(tf.layers.maxPooling1d({poolSize:2}));
+ m.add(tf.layers.conv1d({filters:24,kernelSize:3,padding:"same",activation:"relu"}));
+ m.add(tf.layers.globalAveragePooling1d());
+ m.add(tf.layers.dropout({rate:.15}));
+ m.add(tf.layers.dense({units:20,activation:"relu"}));
  m.add(tf.layers.dense({units:n,activation:"softmax"}));
- m.compile({optimizer:tf.train.adam(.0015),loss:"sparseCategoricalCrossentropy",metrics:["accuracy"]});
+ m.compile({optimizer:tf.train.adam(.001),loss:"sparseCategoricalCrossentropy",metrics:["accuracy"]});
  return m;
 }
 function tensors(items,labelList){
@@ -262,6 +265,12 @@ $("trainBtn").onclick=async()=>{
    const perLabelTrain=Object.fromEntries(labels.map(l=>[l,trainAll.filter(x=>x.label===l).length]));
    if(Math.min(...Object.values(perLabelTrain))<4){alert("Each sign needs at least 4 training samples outside the hold-out participant.");return}
 
+   $("trainText").textContent="Checking browser AI engine…";
+   $("bar").style.width="1%";
+   await tf.ready();
+   try{
+     if(tf.getBackend()!=="cpu"){await tf.setBackend("cpu");await tf.ready();}
+   }catch(e){console.warn("Backend switch skipped",e)}
    const shuffled=trainAll.slice(); tf.util.shuffle(shuffled);
    const tr=[],va=[];
    for(const l of labels){
@@ -279,7 +288,7 @@ $("trainBtn").onclick=async()=>{
    $("resultsLog").textContent="Training in browser…";
    await tf.nextFrame();
 
-   const EPOCHS=18;
+   const EPOCHS=15;
    await model.fit(T.x,T.y,{
      epochs:EPOCHS,
      batchSize:Math.min(6,tr.length),
