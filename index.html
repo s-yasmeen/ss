@@ -274,7 +274,7 @@ function setPrediction(name,conf){
      autoSpeakArmed=false;
      speakText(name);
    }
- }else if(conf<0.80 || name==="UNKNOWN" || name==="READY"){
+ }else if(conf<0.70 || name==="UNKNOWN" || name==="READY"){
    // Re-arm after the user changes/removes the gesture.
    autoSpeakArmed=true;
  }
