@@ -72,7 +72,7 @@
         <div id="personSummary" class="personSummary"></div><div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 12 • SPEECH FIX</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 13 • LIVE RECOGNITION FIX</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -99,7 +99,7 @@
 import {HandLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";
 const $=id=>document.getElementById(id), sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let handLandmarker,stream,ctx,drawing,trainCtx,trainDrawing,model=null,labels=[],dataset=JSON.parse(localStorage.getItem("svx-data")||"[]");
-let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[];
+let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[], inferenceBusy=false, inferenceErrors=0;
 const SEQ=24, FEAT=126;
 
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab,.page").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.page).classList.add("active");updateStats()});
@@ -195,7 +195,7 @@ async function startCamera(){
  $("trainCanvas").width=$("trainVideo").videoWidth;$("trainCanvas").height=$("trainVideo").videoHeight;
  ctx=$("canvas").getContext("2d");drawing=new DrawingUtils(ctx);
  trainCtx=$("trainCanvas").getContext("2d");trainDrawing=new DrawingUtils(trainCtx);
- $("camStatus").textContent="● Camera active";$("camStatus").classList.add("on");if(model){$("conf").textContent="Show a trained sign"}
+ liveBuffer=[];$("camStatus").textContent="● Camera active";$("camStatus").classList.add("on");if(model&&labels.length){$("conf").textContent="Show a trained sign — collecting 24 frames"}else{$("conf").textContent="No trained model loaded"}
  $("trainCamStatus").textContent="● Camera active";$("trainCamStatus").classList.add("on");
  $("recordOverlay").textContent="Camera ready — choose a sign and record";
  loop();
@@ -236,7 +236,23 @@ async function loop(){
      $("recordOverlay").textContent="Recording paused — show your hand clearly";
    }
  }
- if(model && r.landmarks?.length){liveBuffer.push(f);if(liveBuffer.length>SEQ)liveBuffer.shift();if(liveBuffer.length===SEQ && now-lastPredict>450){lastPredict=now;predict(liveBuffer)}}
+ if(model && r.landmarks?.length){
+   liveBuffer.push(f);
+   if(liveBuffer.length>SEQ) liveBuffer.shift();
+   if(liveBuffer.length<SEQ){
+     $("conf").textContent="Reading sign… "+liveBuffer.length+"/"+SEQ+" frames";
+     $("ringText").textContent=Math.round(liveBuffer.length/SEQ*100)+"%";
+   }else if(now-lastPredict>450 && !inferenceBusy){
+     lastPredict=now;
+     predict(liveBuffer.slice()).catch(err=>{
+       console.error("Inference error",err);
+       inferenceErrors++;
+       $("word").textContent="CHECK";
+       $("conf").textContent="Recognition error — restart camera";
+       $("ringText").textContent="!";
+     });
+   }
+ }
  requestAnimationFrame(loop);
 }
 function setPrediction(name,conf){
@@ -245,9 +261,28 @@ function setPrediction(name,conf){
  $("detectCard").classList.remove("flash");void $("detectCard").offsetWidth;$("detectCard").classList.add("flash");
 }
 async function predict(seq){
- const x=tf.tensor(seq,[1,SEQ,FEAT]);const y=model.predict(x);const p=Array.from(await y.data());x.dispose();y.dispose();
- let idx=p.indexOf(Math.max(...p)),conf=p[idx],th=parseFloat($("threshold").value)||.75;
- setPrediction(conf>=th?labels[idx]:"UNKNOWN",conf);
+ if(!model || !labels.length) return;
+ inferenceBusy=true;
+ let x=null,y=null;
+ try{
+   x=tf.tensor3d([seq],[1,SEQ,FEAT],"float32");
+   y=model.predict(x);
+   if(Array.isArray(y)) y=y[0];
+   const p=Array.from(await y.data());
+   if(!p.length || p.some(v=>!Number.isFinite(v))){
+     throw new Error("Model returned invalid probabilities");
+   }
+   let idx=0;
+   for(let i=1;i<p.length;i++) if(p[i]>p[idx]) idx=i;
+   const conf=p[idx];
+   const th=parseFloat($("threshold").value)||.75;
+   setPrediction(conf>=th?(labels[idx]||"UNKNOWN"):"UNKNOWN",conf);
+   inferenceErrors=0;
+ }finally{
+   if(x) x.dispose();
+   if(y && typeof y.dispose==="function") y.dispose();
+   inferenceBusy=false;
+ }
 }
 $("startBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
 $("trainStartBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
@@ -468,7 +503,7 @@ $("trainBtn").onclick=async()=>{
    if(V){V.x.dispose();V.y.dispose()}
  }
 };
-async function loadSaved(){try{model=await tf.loadLayersModel("indexeddb://silentvoice-x");labels=JSON.parse(localStorage.getItem("svx-labels")||"[]");if(labels.length){$("modelStatus").textContent="● Saved AI loaded";$("modelStatus").classList.add("on");$("word").textContent="READY";$("conf").textContent="AI trained — start camera"}}catch(e){}}
+async function loadSaved(){try{model=await tf.loadLayersModel("indexeddb://silentvoice-x");labels=JSON.parse(localStorage.getItem("svx-labels")||"[]");if(labels.length){$("modelStatus").textContent="● Saved AI loaded ("+labels.length+" signs)";$("modelStatus").classList.add("on");$("word").textContent="READY";$("conf").textContent="AI trained — start camera"}}catch(e){}}
 logSamples();loadSaved();
 </script>
 </body>
