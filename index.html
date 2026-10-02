@@ -71,7 +71,7 @@
         <div id="personSummary" class="personSummary"></div><div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 9 • SAMPLE COUNTS</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 10 • TRANSLATE FIX</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -194,7 +194,7 @@ async function startCamera(){
  $("trainCanvas").width=$("trainVideo").videoWidth;$("trainCanvas").height=$("trainVideo").videoHeight;
  ctx=$("canvas").getContext("2d");drawing=new DrawingUtils(ctx);
  trainCtx=$("trainCanvas").getContext("2d");trainDrawing=new DrawingUtils(trainCtx);
- $("camStatus").textContent="● Camera active";$("camStatus").classList.add("on");
+ $("camStatus").textContent="● Camera active";$("camStatus").classList.add("on");if(model){$("conf").textContent="Show a trained sign"}
  $("trainCamStatus").textContent="● Camera active";$("trainCamStatus").classList.add("on");
  $("recordOverlay").textContent="Camera ready — choose a sign and record";
  loop();
@@ -386,7 +386,7 @@ $("trainBtn").onclick=async()=>{
    $("valAcc").textContent=val==null?"—":(val*100).toFixed(1)+"%";
    $("holdAcc").textContent=held==null?"No data":(held*100).toFixed(1)+"%";
    $("resultsLog").textContent="Classes: "+labels.join(", ")+"\nTrain samples: "+tr.length+"\nValidation samples: "+va.length+"\nHeld-out signer: "+hold+" ("+test.length+" samples)\nFinal validation accuracy: "+(val==null?"not measured":(val*100).toFixed(1)+"%")+"\nUnseen-signer accuracy: "+(held==null?"not measured":(held*100).toFixed(1)+"%");
-   $("modelStatus").textContent="● AI trained";$("modelStatus").classList.add("on");
+   $("modelStatus").textContent="● AI trained";$("modelStatus").classList.add("on");$("word").textContent="READY";$("conf").textContent="AI trained — start camera";
    $("trainText").textContent="✓ Training complete";
    try{await model.save("indexeddb://silentvoice-x");localStorage.setItem("svx-labels",JSON.stringify(labels))}catch(e){}
  }catch(e){
@@ -400,7 +400,7 @@ $("trainBtn").onclick=async()=>{
    if(V){V.x.dispose();V.y.dispose()}
  }
 };
-async function loadSaved(){try{model=await tf.loadLayersModel("indexeddb://silentvoice-x");labels=JSON.parse(localStorage.getItem("svx-labels")||"[]");if(labels.length){$("modelStatus").textContent="● Saved AI loaded";$("modelStatus").classList.add("on")}}catch(e){}}
+async function loadSaved(){try{model=await tf.loadLayersModel("indexeddb://silentvoice-x");labels=JSON.parse(localStorage.getItem("svx-labels")||"[]");if(labels.length){$("modelStatus").textContent="● Saved AI loaded";$("modelStatus").classList.add("on");$("word").textContent="READY";$("conf").textContent="AI trained — start camera"}}catch(e){}}
 logSamples();loadSaved();
 </script>
 </body>
