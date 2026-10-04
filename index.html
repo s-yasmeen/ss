@@ -34,11 +34,12 @@
   <section id="translate" class="page active">
     <div class="grid">
       <div class="card">
-        <div id="cameraWrap" class="cameraWrap">
+        <div id="cameraWrap" class="cameraWrap privacy">
           <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas>
+          <div class="privacyTag">🔒 CAMERA PRIVACY ON • HAND LANDMARKS ONLY</div>
         </div>
-        <div class="statusRow"><span id="camStatus" class="pill">● Camera off</span><span id="handStatus" class="pill">● Waiting for hand</span><span id="modelStatus" class="pill">● Model not trained</span><span id="offlineStatus" class="pill">📴 Offline checking</span><span class="pill on">✋ Sign-only mode</span><span class="pill on">🚫 No camera upload</span><span id="autoSpeakStatus" class="pill on">🔊 Auto-speak ≥80%</span></div>
-        <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="offlineBtn" class="btn ghost">📴 Offline Setup</button><button id="clearBtn" class="btn ghost">Clear</button></div><div class="note" style="margin-top:8px">Hand landmarks are processed on this device. SilentVoiceX does not upload or save camera video.</div>
+        <div class="statusRow"><span id="camStatus" class="pill">● Camera off</span><span id="handStatus" class="pill">● Waiting for hand</span><span id="modelStatus" class="pill">● Model not trained</span><span id="offlineStatus" class="pill">📴 Offline checking</span><span class="pill on">✋ Sign-only mode</span><span class="pill on">🔒 Camera Privacy ON</span><span class="pill on">🚫 No camera upload</span><span id="autoSpeakStatus" class="pill on">🔊 Auto-speak ≥80%</span></div>
+        <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="offlineBtn" class="btn ghost">📴 Offline Setup</button><button id="clearBtn" class="btn ghost">Clear</button></div><div class="note" style="margin-top:8px">Camera Privacy is always ON: raw video is hidden while hand landmarks are processed locally. SilentVoiceX does not upload or save camera video.</div>
       </div>
       <div id="detectCard" class="card detect spark">
         <div class="smallcap">AI DETECTED</div><div id="word" class="word">READY</div><div id="conf" class="conf">Train the AI first</div>
@@ -54,17 +55,18 @@
       <div class="card">
         <div class="smallcap">DATASET LAB</div><h2>Teach SilentVoice a sign</h2>
         <div class="trainPreview">
-          <div id="trainCameraWrap" class="cameraWrap">
+          <div id="trainCameraWrap" class="cameraWrap privacy">
             <video id="trainVideo" autoplay playsinline muted></video>
             <canvas id="trainCanvas"></canvas>
+            <div class="privacyTag">🔒 CAMERA PRIVACY ON • HAND LANDMARKS ONLY</div>
             <div id="recordOverlay" class="recordOverlay">Camera off — tap Start Camera</div>
           </div>
           <div class="statusRow">
             <span id="trainCamStatus" class="pill">● Camera off</span>
             <span id="trainHandStatus" class="pill">● Waiting for hand</span>
-            <span class="pill on">✋ Hand data only</span>
+            <span class="pill on">✋ Hand data only</span><span class="pill on">🔒 Camera Privacy ON</span>
           </div>
-          <div class="controls"><button id="trainStartBtn" class="btn primary">Start Camera</button></div><div class="note" style="margin-top:8px">Only normalized hand-landmark sequences are stored for training. No facial data is collected.</div>
+          <div class="controls"><button id="trainStartBtn" class="btn primary">Start Camera</button></div><div class="note" style="margin-top:8px">Camera Privacy is always ON. Only normalized hand-landmark sequences are stored for training; raw camera video is not saved or uploaded.</div>
         </div>
         <div class="formgrid">
           <div class="field"><label>Participant ID</label><input id="participant" value="P001"></div>
@@ -77,7 +79,7 @@
         <div id="personSummary" class="personSummary"></div><div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 26 • LOCAL OFFLINE SIGN AI</div><p class="note">No Python. Hand-sign training and recognition run directly in this browser using a lightweight temporal neural network.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 27 • PRIVATE OFFLINE SIGN AI</div><p class="note">No Python. Hand-sign training and recognition run directly in this browser using a lightweight temporal neural network.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>

@@ -14,9 +14,9 @@
 </head>
 <body><div class="card">
 <img class="logo" src="./icon.svg" alt="SilentVoiceX icon">
-<div class="tag">✋ SIGN-ONLY • ON-DEVICE • OFFLINE</div>
+<div class="tag">✋ SIGN-ONLY • CAMERA-PRIVATE • OFFLINE</div>
 <div class="title"><span>SilentVoiceX</span></div>
-<div class="sub">Prepare the complete hand-sign AI runtime for use without Wi-Fi or mobile data. TensorFlow.js, MediaPipe, WebAssembly files and the hand model are hosted with SilentVoiceX and cached on this device.</div>
+<div class="sub">Prepare the complete hand-sign AI runtime for use without Wi-Fi or mobile data. Camera Privacy stays ON and raw video remains hidden. TensorFlow.js, MediaPipe, WebAssembly files and the hand model are hosted with SilentVoiceX and cached on this device.</div>
 <div id="status" class="status">Checking offline runtime…</div>
 <div class="bar"><div id="fill" class="fill"></div></div>
 <div class="buttons"><button id="prepare" class="btn primary">Prepare Offline Mode</button><button id="open" class="btn ghost">Open SilentVoiceX</button></div>
@@ -24,10 +24,10 @@
 </div>
 <script>
 const statusEl=document.getElementById('status'),fill=document.getElementById('fill'),prepare=document.getElementById('prepare'),openBtn=document.getElementById('open');
-const CACHE='silentvoicex-offline-v9';
+const CACHE='silentvoicex-offline-v10';
 const assets=['./','./index.html','./offline.html','./manifest.webmanifest','./icon.svg','./vendor/tf.min.js','./vendor/tasks-vision.mjs','./vendor/wasm/vision_wasm_internal.js','./vendor/wasm/vision_wasm_internal.wasm','./vendor/wasm/vision_wasm_nosimd_internal.js','./vendor/wasm/vision_wasm_nosimd_internal.wasm','./vendor/models/hand_landmarker.task'];
 async function ensureWorker(){if(!('serviceWorker' in navigator))throw new Error('Offline mode is not supported in this browser.');await navigator.serviceWorker.register('./sw.js',{scope:'./'});await navigator.serviceWorker.ready;}
 async function prepareOffline(){prepare.disabled=true;try{await ensureWorker();const cache=await caches.open(CACHE);let done=0;for(const url of assets){const r=await fetch(url,{cache:'reload'});if(!r.ok)throw new Error('Could not cache '+url);await cache.put(url,r.clone());done++;fill.style.width=Math.round(done/assets.length*100)+'%';statusEl.textContent='Saving offline AI files… '+done+'/'+assets.length;}localStorage.setItem('svx-offline-prepared-v5','1');statusEl.textContent='✓ Offline Ready — all sign-recognition files verified on this device.';fill.style.width='100%';}catch(e){localStorage.removeItem('svx-offline-prepared-v5');statusEl.textContent='Offline setup failed: '+e.message;}finally{prepare.disabled=false;}}
-prepare.onclick=prepareOffline;openBtn.onclick=()=>location.href='./index.html?v=26';
+prepare.onclick=prepareOffline;openBtn.onclick=()=>location.href='./index.html?v=27';
 (async()=>{try{await ensureWorker();if(localStorage.getItem('svx-offline-prepared-v5')==='1'){statusEl.textContent=navigator.onLine?'✓ Offline Ready':'✓ Running without internet';fill.style.width='100%';}else statusEl.textContent='Tap Prepare Offline Mode while connected to the internet.';}catch(e){statusEl.textContent='Offline setup unavailable: '+e.message;}})();
 </script></body></html>
