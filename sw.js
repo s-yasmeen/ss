@@ -1,4 +1,4 @@
-const CACHE_NAME = 'silentvoicex-offline-v1';
+const CACHE_NAME = 'silentvoicex-offline-v2';
 
 const CORE_ASSETS = [
   './',
@@ -12,6 +12,7 @@ const EXTERNAL_ASSETS = [
   'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js',
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm',
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+  'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_internal.js',
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_internal.wasm',
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_nosimd_internal.js',

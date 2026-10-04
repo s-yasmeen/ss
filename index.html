@@ -34,13 +34,13 @@
         <div id="cameraWrap" class="cameraWrap privacy">
           <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas><div class="privacyTag">🔒 PRIVACY MODE</div>
         </div>
-        <div class="statusRow"><span id="camStatus" class="pill">● Camera off</span><span id="handStatus" class="pill">● Waiting for hand</span><span id="modelStatus" class="pill">● Model not trained</span><span class="pill on">🔒 Privacy always on</span><span class="pill on">🔊 Auto-speak ≥80%</span></div>
+        <div class="statusRow"><span id="camStatus" class="pill">● Camera off</span><span id="handStatus" class="pill">● Waiting for hand</span><span id="modelStatus" class="pill">● Model not trained</span><span id="expressionStatus" class="pill">🙂 Expression waiting</span><span class="pill on">🔒 Privacy always on</span><span class="pill on">🔊 Auto-speak ≥80%</span></div>
         <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="privacyBtn" class="btn ghost" disabled>🔒 Privacy ON</button><button id="clearBtn" class="btn ghost">Clear</button></div>
       </div>
       <div id="detectCard" class="card detect spark">
         <div class="smallcap">AI DETECTED</div><div id="word" class="word">READY</div><div id="conf" class="conf">Train the AI first</div>
         <div style="position:relative;width:98px"><div id="ring" class="ring"></div><div id="ringText" class="ringText" style="inset:38px 0;text-align:center">0%</div></div>
-        <div class="sentence"><div id="seq" class="seq">SIGN SEQUENCE: —</div><div id="natural" class="natural">“Your phrase will appear here.”</div></div>
+        <div class="sentence"><div id="seq" class="seq">SIGN SEQUENCE: —</div><div id="natural" class="natural">“Your phrase will appear here.”</div></div><div class="sentence" style="margin-top:10px"><div class="seq">FACIAL EXPRESSION CUE</div><div id="expressionCue" class="natural">—</div><div id="expressionStrength" class="note">Local landmark analysis • not a measure of inner emotion</div></div>
         <div class="controls"><button id="speakBtn" class="btn hot">🔊 SPEAK</button><button id="addBtn" class="btn primary">＋ Add Sign</button></div><div class="note" style="margin-top:8px">SPEAK reads the detected sign, or the full phrase if signs have been added.</div>
       </div>
     </div>
@@ -74,7 +74,7 @@
         <div id="personSummary" class="personSummary"></div><div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 15 • AUTO SPEAK 80%</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 18 • EXPRESSION CUES</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -98,10 +98,10 @@
 </div>
 
 <script type="module">
-import {HandLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";
+import {HandLandmarker, FaceLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";
 const $=id=>document.getElementById(id), sleep=ms=>new Promise(r=>setTimeout(r,ms));
-let handLandmarker,stream,ctx,drawing,trainCtx,trainDrawing,model=null,labels=[],dataset=JSON.parse(localStorage.getItem("svx-data")||"[]");
-let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[], inferenceBusy=false, inferenceErrors=0, autoSpeakLastLabel="", autoSpeakArmed=true;
+let handLandmarker,faceLandmarker,stream,ctx,drawing,trainCtx,trainDrawing,model=null,labels=[],dataset=JSON.parse(localStorage.getItem("svx-data")||"[]");
+let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[], inferenceBusy=false, inferenceErrors=0, autoSpeakLastLabel="", autoSpeakArmed=true, lastExpressionAt=0;
 const SEQ=24, FEAT=126;
 
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab,.page").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.page).classList.add("active");updateStats()});
@@ -185,6 +185,44 @@ async function initLandmarker(){
  if(handLandmarker)return;
  const vision=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
  handLandmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",delegate:"GPU"},runningMode:"VIDEO",numHands:2,minHandDetectionConfidence:.55,minHandPresenceConfidence:.55,minTrackingConfidence:.5});
+ try{
+   faceLandmarker=await FaceLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",delegate:"GPU"},runningMode:"VIDEO",numFaces:1,outputFaceBlendshapes:true,minFaceDetectionConfidence:.5,minFacePresenceConfidence:.5,minTrackingConfidence:.5});
+   $("expressionStatus").textContent="🙂 Expression ready";
+   $("expressionStatus").classList.add("on");
+ }catch(err){
+   console.warn("Expression module unavailable",err);
+   $("expressionStatus").textContent="Expression unavailable";
+ }
+}
+function blendshapeScore(categories,name){
+ const item=categories.find(x=>x.categoryName===name);
+ return item?item.score:0;
+}
+function updateExpression(faceResult){
+ const sets=faceResult?.faceBlendshapes;
+ if(!sets?.length){
+   $("expressionCue").textContent="No face";
+   $("expressionStrength").textContent="Keep your face visible to the camera • processing stays on-device";
+   return;
+ }
+ const c=sets[0].categories||[];
+ const smile=(blendshapeScore(c,"mouthSmileLeft")+blendshapeScore(c,"mouthSmileRight"))/2;
+ const frown=(blendshapeScore(c,"mouthFrownLeft")+blendshapeScore(c,"mouthFrownRight"))/2;
+ const surprise=Math.min(1,(blendshapeScore(c,"jawOpen")+blendshapeScore(c,"browInnerUp"))/2);
+ const candidates=[
+   {label:"🙂 Smile cue",score:smile},
+   {label:"🙁 Frown cue",score:frown},
+   {label:"😮 Surprise cue",score:surprise}
+ ];
+ candidates.sort((a,b)=>b.score-a.score);
+ const best=candidates[0];
+ if(best.score<0.38){
+   $("expressionCue").textContent="😐 Neutral / no strong cue";
+   $("expressionStrength").textContent="No strong facial-expression cue detected • local processing";
+ }else{
+   $("expressionCue").textContent=best.label;
+   $("expressionStrength").textContent="Cue strength "+Math.round(best.score*100)+"% • not a measure of inner emotion";
+ }
 }
 async function startCamera(){
  if(stream) return;
@@ -205,6 +243,11 @@ async function startCamera(){
 async function loop(){
  if(!stream)return;
  const now=performance.now(),r=handLandmarker.detectForVideo($("video"),now);
+ if(faceLandmarker && now-lastExpressionAt>220){
+   lastExpressionAt=now;
+   try{updateExpression(faceLandmarker.detectForVideo($("video"),now));}
+   catch(err){console.warn("Expression inference error",err)}
+ }
  ctx.clearRect(0,0,$("canvas").width,$("canvas").height);
  trainCtx.clearRect(0,0,$("trainCanvas").width,$("trainCanvas").height);
  handVisible=!!r.landmarks?.length;
