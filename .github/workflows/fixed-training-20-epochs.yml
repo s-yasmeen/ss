@@ -1,0 +1,35 @@
+name: Fixed 20 epoch training
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fixed-training-20-epochs.yml'
+      - 'scripts/remove_early_stopping.py'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove self-stopping training callback
+        run: python scripts/remove_early_stopping.py
+      - name: Validate browser module syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text(encoding='utf-8')
+          a=s.index('<script type="module">')+len('<script type="module">')
+          b=s.index('</script>',a)
+          Path('/tmp/svx-app.mjs').write_text(s[a:b],encoding='utf-8')
+          PY
+          node --check /tmp/svx-app.mjs
+      - name: Commit fixed training build
+        run: |
+          git config user.name "SilentVoiceX Builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html sw.js
+          git commit -m "Use fixed 20-epoch training without early stopping" || exit 0
+          git push
