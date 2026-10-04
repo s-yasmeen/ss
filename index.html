@@ -108,7 +108,7 @@
         <div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">ACCURACY BUILD • STARTER SIGNS • 6+ SAMPLES/SIGN • OFFLINE</div><p class="note">No Python. Training uses a stronger temporal Conv1D model with stratified validation, dropout, batch normalization and early stopping. More varied samples usually improve signer-independent accuracy.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">STABLE BUILD • 20 EPOCHS • 6+ SAMPLES/SIGN • OFFLINE</div><p class="note">No Python. Training uses a temporal Conv1D model with stratified validation, dropout and batch normalization. It now runs a fixed 20 epochs so training cannot stop itself early. More varied samples usually improve signer-independent accuracy.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -590,25 +590,23 @@ $("trainBtn").onclick=async()=>{
    $("resultsLog").textContent="Training in browser…";
    await tf.nextFrame();
 
-   const EPOCHS=35;
+   const EPOCHS=20;
    await model.fit(T.x,T.y,{
      epochs:EPOCHS,
      batchSize:Math.min(8,tr.length),
      validationData:[V.x,V.y],
      shuffle:true,
-     callbacks:[
-       tf.callbacks.earlyStopping({monitor:"val_loss",patience:5,minDelta:0.001}),
-       {
-         onTrainBegin:async()=>{$("trainText").textContent="Training stronger model…";await tf.nextFrame()},
-         onEpochEnd:async(e,l)=>{
-           const acc=(l.acc??l.accuracy??0)*100;
-           const vacc=(l.val_acc??l.val_accuracy??0)*100;
-           $("bar").style.width=((e+1)/EPOCHS*100)+"%";
-           $("trainText").textContent="Epoch "+(e+1)+"/"+EPOCHS+" • accuracy "+acc.toFixed(1)+"% • validation "+vacc.toFixed(1)+"%";
-           await tf.nextFrame();
-         }
-       }
-     ]
+     callbacks:{
+       onTrainBegin:async()=>{$("trainText").textContent="Training model — fixed 20 epochs…";await tf.nextFrame()},
+       onEpochEnd:async(e,l)=>{
+         const acc=(l.acc??l.accuracy??0)*100;
+         const vacc=(l.val_acc??l.val_accuracy??0)*100;
+         $("bar").style.width=((e+1)/EPOCHS*100)+"%";
+         $("trainText").textContent="Epoch "+(e+1)+"/"+EPOCHS+" • accuracy "+acc.toFixed(1)+"% • validation "+vacc.toFixed(1)+"%";
+         await tf.nextFrame();
+       },
+       onTrainEnd:async()=>{$("bar").style.width="100%";$("trainText").textContent="Training finished — evaluating…";await tf.nextFrame()}
+     }
    });
 
    const val=await evaluate(va),held=await evaluate(test);
