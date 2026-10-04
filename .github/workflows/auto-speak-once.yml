@@ -1,0 +1,35 @@
+name: Enable auto speak once
+
+on:
+  push:
+    paths:
+      - '.github/workflows/auto-speak-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply auto-speak-once behavior
+        run: python scripts/auto_speak_once.py
+      - name: Validate browser module syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text()
+          m=re.search(r'<script type="module">(.*?)</script>',s,re.S)
+          if not m: raise SystemExit('module script not found')
+          Path('/tmp/svx-app.mjs').write_text(m.group(1))
+          PY
+          node --check /tmp/svx-app.mjs
+      - name: Commit auto-speak-once build
+        run: |
+          git config user.name 'SilentVoiceX Builder'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html sw.js
+          git commit -m 'Speak accepted signs automatically once' || exit 0
+          git push
