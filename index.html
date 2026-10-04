@@ -24,7 +24,7 @@
 </head>
 <body>
 <div class="shell">
-  <div class="top"><div class="brand"><h1>✋ <span>SilentVoice X</span></h1><p>AI that turns signs into speech</p></div></div>
+  <div class="top"><div class="brand"><h1>✋ <span>SilentVoice X</span></h1><p>AI that turns signs into speech</p></div><button id="headerOfflineBtn" class="btn primary">📴 Offline Setup</button></div>
   <div class="tabs">
     <button class="tab active" data-page="translate">✋ Translate</button>
     <button class="tab" data-page="train">🧠 Train AI</button>
@@ -78,7 +78,7 @@
         <div id="personSummary" class="personSummary"></div><div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 23 • EXPRESSION TOGGLE</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 24 • OFFLINE SETUP BUTTON</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -476,6 +476,7 @@ $("trainPrivacyBtn").onclick=toggleFacePrivacy;
 $("trainExpressionToggleBtn").onclick=toggleExpression;
 syncFacePrivacy();
 $("offlineBtn").onclick=()=>{location.href="./offline.html"};
+if($("headerOfflineBtn")) $("headerOfflineBtn").onclick=()=>{location.href="./offline.html"};
 $("trainStartBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
 $("cameraWrap").classList.add("privacy");
 $("trainCameraWrap").classList.add("privacy");
