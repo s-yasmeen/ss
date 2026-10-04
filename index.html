@@ -6,6 +6,9 @@
 <title>SilentVoiceX</title>
 <meta name="application-name" content="SilentVoiceX">
 <meta name="apple-mobile-web-app-title" content="SilentVoiceX">
+<meta name="theme-color" content="#07111f">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 <style>
 :root{--bg:#07111f;--card:#0d1b2e;--cyan:#45e6ff;--violet:#8b5cf6;--pink:#ff4fa3;--text:#f7fbff;--muted:#9bb0c9;--good:#3ee6a0;--warn:#ffd166}
@@ -21,7 +24,7 @@
 </head>
 <body>
 <div class="shell">
-  <div class="top"><div class="brand"><h1>✋ <span>SilentVoice X</span></h1><p>AI that turns signs into speech</p></div></div>
+  <div class="top"><div class="brand"><h1>✋ <span>SilentVoice X</span></h1><p>AI that turns signs into speech</p></div><button id="headerOfflineBtn" class="btn primary">📴 Offline Setup</button></div>
   <div class="tabs">
     <button class="tab active" data-page="translate">✋ Translate</button>
     <button class="tab" data-page="train">🧠 Train AI</button>
@@ -35,7 +38,7 @@
           <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas><div class="privacyTag">🔒 PRIVACY MODE</div>
         </div>
         <div class="statusRow"><span id="camStatus" class="pill">● Camera off</span><span id="handStatus" class="pill">● Waiting for hand</span><span id="modelStatus" class="pill">● Model not trained</span><span class="pill on">🔒 Privacy always on</span><span class="pill on">🔊 Auto-speak once</span></div>
-        <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="privacyBtn" class="btn ghost" disabled>🔒 Privacy ON</button><button id="clearBtn" class="btn ghost">Clear</button></div>
+        <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="offlineBtn" class="btn ghost">📴 Offline Setup</button><button id="privacyBtn" class="btn ghost" disabled>🔒 Privacy ON</button><button id="clearBtn" class="btn ghost">Clear</button></div>
       </div>
       <div id="detectCard" class="card detect spark">
         <div class="smallcap">AI DETECTED</div><div id="word" class="word">READY</div><div id="conf" class="conf">Train the AI first</div>
@@ -65,12 +68,12 @@
         </div>
         <div class="formgrid">
           <div class="field"><label>Participant ID</label><input id="participant" value="P001"></div>
-          <div class="field"><label>Sign label</label><input id="label" value="HELLO" maxlength="24"></div>
+          <div class="field"><label>Sign label</label><input id="label" value="HELLO" maxlength="24" list="signVocabulary"><datalist id="signVocabulary"><option value="HELLO"><option value="THANK YOU"><option value="YES"><option value="NO"><option value="PLEASE"><option value="HELP"><option value="STOP"><option value="GOOD"><option value="LOVE"><option value="WATER"><option value="FOOD"><option value="HOME"></datalist></div>
           <div class="field"><label>Hold-out participant for final test</label><input id="holdout" value="P003"></div>
-          <div class="field"><label>Unknown threshold</label><input id="threshold" type="number" min=".5" max=".99" step=".01" value=".75"></div>
+          <div class="field"><label>Recognition threshold</label><input id="threshold" type="number" min=".5" max=".99" step=".01" value=".80"></div>
         </div>
         <div class="controls"><button id="recordBtn" class="btn hot">● Record 1 sample</button><button id="deleteSelectedBtn" class="btn ghost">Delete this participant + sign</button></div>
-        <p class="note"><b>Important:</b> every participant should record the <b>same sign labels</b>. Example: P001 records HELLO, GOOD, HEART; P002 records HELLO, GOOD, HEART; P003 records HELLO, GOOD, HEART. Use P003 only as the unseen test signer.</p>
+        <p class="note"><b>Accuracy rule:</b> train at least <b>3 different signs</b>. Each sign needs at least <b>8 training samples</b> outside the hold-out participant and must be recorded by at least <b>2 training participants</b>. Use the same labels for every participant. The suggested labels above are optional; you can type your own sign label.</p>
         <div id="personSummary" class="personSummary"></div>
         <div class="recordSelectBar">
           <button id="selectAllRecordsBtn" class="btn ghost">☑ Select All</button>
@@ -81,7 +84,7 @@
         <div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">PRE-FACE BUILD • LANDMARKS 0.50 • AUTO-SPEAK ONCE</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">ACCURACY BUILD • 3+ SIGNS • 8+ SAMPLES/SIGN • OFFLINE</div><p class="note">No Python. Training uses a stronger temporal Conv1D model with stratified validation, dropout, batch normalization and early stopping. More varied samples usually improve signer-independent accuracy.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -110,7 +113,7 @@ const $=id=>document.getElementById(id), sleep=ms=>new Promise(r=>setTimeout(r,m
 let handLandmarker,stream,ctx,drawing,trainCtx,trainDrawing,model=null,labels=[],dataset=JSON.parse(localStorage.getItem("svx-data")||"[]");
 let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[], inferenceBusy=false, inferenceErrors=0, autoSpeakLastLabel="", autoSpeakArmed=true;
 let selectedRecordIndexes=new Set();
-const SEQ=24, FEAT=126;
+const SEQ=24, FEAT=126, MIN_SIGNS=3, MIN_TRAIN_PER_SIGN=8, MIN_TRAIN_PARTICIPANTS=2;
 
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab,.page").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.page).classList.add("active");updateStats()});
 
@@ -346,6 +349,8 @@ async function predict(seq){
 }
 $("startBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
 $("trainStartBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
+$("headerOfflineBtn").onclick=()=>{location.href="./offline.html"};
+$("offlineBtn").onclick=()=>{location.href="./offline.html"};
 $("cameraWrap").classList.add("privacy");
 $("trainCameraWrap").classList.add("privacy");
 $("clearBtn").onclick=()=>{phrase=[];autoSpeakArmed=true;autoSpeakLastLabel="";updatePhrase();setPrediction("READY",0)};
@@ -467,14 +472,17 @@ $("deleteSelectedBtn").onclick=()=>{
 
 function buildModel(n){
  const m=tf.sequential();
- m.add(tf.layers.conv1d({filters:16,kernelSize:3,padding:"same",activation:"relu",inputShape:[SEQ,FEAT]}));
+ m.add(tf.layers.conv1d({filters:32,kernelSize:5,padding:"same",activation:"relu",inputShape:[SEQ,FEAT]}));
+ m.add(tf.layers.batchNormalization());
  m.add(tf.layers.maxPooling1d({poolSize:2}));
- m.add(tf.layers.conv1d({filters:24,kernelSize:3,padding:"same",activation:"relu"}));
+ m.add(tf.layers.conv1d({filters:64,kernelSize:3,padding:"same",activation:"relu"}));
+ m.add(tf.layers.batchNormalization());
  m.add(tf.layers.globalAveragePooling1d());
- m.add(tf.layers.dropout({rate:.15}));
- m.add(tf.layers.dense({units:20,activation:"relu"}));
+ m.add(tf.layers.dropout({rate:.25}));
+ m.add(tf.layers.dense({units:64,activation:"relu"}));
+ m.add(tf.layers.dropout({rate:.20}));
  m.add(tf.layers.dense({units:n,activation:"softmax"}));
- m.compile({optimizer:tf.train.adam(.001),loss:"categoricalCrossentropy",metrics:["accuracy"]});
+ m.compile({optimizer:tf.train.adam(.0007),loss:"categoricalCrossentropy",metrics:["accuracy"]});
  return m;
 }
 function tensors(items,labelList){
@@ -502,12 +510,16 @@ $("trainBtn").onclick=async()=>{
  let T=null,V=null;
  try{
    labels=[...new Set(dataset.map(x=>x.label))].sort();
-   if(labels.length<2){alert("Record at least 2 different sign labels first.");return}
+   if(labels.length<MIN_SIGNS){alert("Record at least "+MIN_SIGNS+" different sign labels before training. Add more signs first.");return}
    const counts=Object.fromEntries(labels.map(l=>[l,dataset.filter(x=>x.label===l).length]));
-   if(Math.min(...Object.values(counts))<4){alert("Collect at least 4 samples for every sign before training.");return}
+   if(Math.min(...Object.values(counts))<MIN_TRAIN_PER_SIGN){alert("Collect at least "+MIN_TRAIN_PER_SIGN+" samples for every sign before training.");return}
    const hold=$("holdout").value.trim();
    const trainAll=dataset.filter(x=>x.participant!==hold);
    const test=dataset.filter(x=>x.participant===hold);
+   const trainingParticipants=[...new Set(trainAll.map(x=>x.participant).filter(Boolean))];
+   if(trainingParticipants.length<MIN_TRAIN_PARTICIPANTS){alert("Use at least "+MIN_TRAIN_PARTICIPANTS+" training participants outside the hold-out participant for better generalization.");return}
+   const participantCoverageProblems=labels.filter(l=>new Set(trainAll.filter(x=>x.label===l).map(x=>x.participant)).size<MIN_TRAIN_PARTICIPANTS);
+   if(participantCoverageProblems.length){alert("Each sign must be recorded by at least "+MIN_TRAIN_PARTICIPANTS+" training participants. Add more samples for: "+participantCoverageProblems.join(", "));return}
    const trainLabels=new Set(trainAll.map(x=>x.label));
    const testLabels=new Set(test.map(x=>x.label));
    const missingTrain=labels.filter(l=>!trainLabels.has(l));
@@ -521,7 +533,7 @@ $("trainBtn").onclick=async()=>{
      return;
    }
    const perLabelTrain=Object.fromEntries(labels.map(l=>[l,trainAll.filter(x=>x.label===l).length]));
-   if(Math.min(...Object.values(perLabelTrain))<4){alert("Each sign needs at least 4 training samples outside the hold-out participant.");return}
+   if(Math.min(...Object.values(perLabelTrain))<MIN_TRAIN_PER_SIGN){alert("Each sign needs at least "+MIN_TRAIN_PER_SIGN+" training samples outside the hold-out participant.");return}
 
    $("trainText").textContent="Checking browser AI engine and labels…";
    $("bar").style.width="1%";
@@ -533,7 +545,7 @@ $("trainBtn").onclick=async()=>{
    const tr=[],va=[];
    for(const l of labels){
      const items=shuffled.filter(x=>x.label===l);
-     const nVal=Math.max(1,Math.floor(items.length*.2));
+     const nVal=Math.max(2,Math.floor(items.length*.2));
      va.push(...items.slice(0,nVal));
      tr.push(...items.slice(nVal));
    }
@@ -546,22 +558,25 @@ $("trainBtn").onclick=async()=>{
    $("resultsLog").textContent="Training in browser…";
    await tf.nextFrame();
 
-   const EPOCHS=15;
+   const EPOCHS=35;
    await model.fit(T.x,T.y,{
      epochs:EPOCHS,
-     batchSize:Math.min(6,tr.length),
+     batchSize:Math.min(8,tr.length),
      validationData:[V.x,V.y],
      shuffle:true,
-     callbacks:{
-       onTrainBegin:async()=>{$("trainText").textContent="Training started…";await tf.nextFrame()},
-       onEpochEnd:async(e,l)=>{
-         const acc=(l.acc??l.accuracy??0)*100;
-         const vacc=(l.val_acc??l.val_accuracy??0)*100;
-         $("bar").style.width=((e+1)/EPOCHS*100)+"%";
-         $("trainText").textContent="Epoch "+(e+1)+"/"+EPOCHS+" • accuracy "+acc.toFixed(1)+"% • validation "+vacc.toFixed(1)+"%";
-         await tf.nextFrame();
+     callbacks:[
+       tf.callbacks.earlyStopping({monitor:"val_loss",patience:5,restoreBestWeights:true}),
+       {
+         onTrainBegin:async()=>{$("trainText").textContent="Training stronger model…";await tf.nextFrame()},
+         onEpochEnd:async(e,l)=>{
+           const acc=(l.acc??l.accuracy??0)*100;
+           const vacc=(l.val_acc??l.val_accuracy??0)*100;
+           $("bar").style.width=((e+1)/EPOCHS*100)+"%";
+           $("trainText").textContent="Epoch "+(e+1)+"/"+EPOCHS+" • accuracy "+acc.toFixed(1)+"% • validation "+vacc.toFixed(1)+"%";
+           await tf.nextFrame();
+         }
        }
-     }
+     ]
    });
 
    const val=await evaluate(va),held=await evaluate(test);
@@ -570,7 +585,7 @@ $("trainBtn").onclick=async()=>{
    $("resultsLog").textContent="Classes: "+labels.join(", ")+"\nTrain samples: "+tr.length+"\nValidation samples: "+va.length+"\nHeld-out signer: "+hold+" ("+test.length+" samples)\nFinal validation accuracy: "+(val==null?"not measured":(val*100).toFixed(1)+"%")+"\nUnseen-signer accuracy: "+(held==null?"not measured":(held*100).toFixed(1)+"%");
    $("modelStatus").textContent="● AI trained";$("modelStatus").classList.add("on");$("word").textContent="READY";$("conf").textContent="AI trained — start camera";
    $("trainText").textContent="✓ Training complete";
-   try{await model.save("indexeddb://silentvoice-x");localStorage.setItem("svx-labels",JSON.stringify(labels))}catch(e){}
+   try{await model.save("indexeddb://silentvoice-x-accurate-v2");localStorage.setItem("svx-labels",JSON.stringify(labels))}catch(e){}
  }catch(e){
    console.error(e);
    $("trainText").textContent="Training error: "+e.message+" • TFJS "+tf.version.tfjs+" • "+tf.getBackend();
@@ -583,7 +598,7 @@ $("trainBtn").onclick=async()=>{
  }
 };
 async function loadSaved(){
- const key="indexeddb://silentvoice-x";
+ const key="indexeddb://silentvoice-x-accurate-v2";
  $("modelStatus").textContent="● Checking saved AI…";
  try{
    await tf.ready();
