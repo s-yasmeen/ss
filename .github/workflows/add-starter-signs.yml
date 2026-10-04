@@ -1,0 +1,40 @@
+name: Add starter sign vocabulary
+on:
+  push:
+    paths:
+      - 'scripts/add_starter_signs.py'
+      - '.github/workflows/add-starter-signs.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add starter sign labels
+        run: python scripts/add_starter_signs.py
+      - name: Validate browser module syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+          s=Path('index.html').read_text(encoding='utf-8')
+          blocks=re.findall(r'<script type="module">(.*?)</script>',s,re.S)
+          assert blocks, 'No module script found'
+          js=blocks[-1]
+          js=re.sub(r'^import .*?;\s*','',js,count=1,flags=re.M)
+          p=Path('/tmp/svx-module.mjs'); p.write_text(js,encoding='utf-8')
+          subprocess.run(['node','--check',str(p)],check=True)
+          print('JavaScript syntax OK')
+          PY
+      - name: Commit starter signs
+        run: |
+          if git diff --quiet; then
+            echo 'No changes needed'
+            exit 0
+          fi
+          git config user.name 'SilentVoiceX Builder'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Add starter sign labels for training'
+          git push
