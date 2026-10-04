@@ -17,14 +17,14 @@
   <img class="logo" src="./icon.svg" alt="SilentVoiceX icon">
   <div class="tag">🔒 ON-DEVICE • OFFLINE-FIRST</div>
   <div class="title"><span>SilentVoiceX</span></div>
-  <div class="sub">Prepare sign recognition, facial-expression cues, and speech support for use without Wi‑Fi or mobile data. Your recorded samples and trained model stay on this device.</div>
+  <div class="sub">Prepare hand-sign recognition and speech support for use without Wi‑Fi or mobile data. Your recorded hand-landmark samples and trained model stay on this device.</div>
   <div id="status" class="status">Checking offline support…</div>
   <div class="bar"><div id="fill" class="fill"></div></div>
   <div class="buttons">
     <button id="prepare" class="btn primary">Prepare Offline Mode</button>
     <button id="open" class="btn ghost">Open SilentVoiceX</button>
   </div>
-  <div class="note">For the most reliable exhibition demo, prepare while online. This caches both hand-sign AI and facial-expression AI. Then open SilentVoiceX once and test again with Airplane Mode enabled. Browser speech also depends on an offline voice being installed on the phone.</div>
+  <div class="note">For the most reliable exhibition demo, prepare while online. This caches the hand-sign AI and required browser files. Then open SilentVoiceX once and test again with Airplane Mode enabled. Browser speech also depends on an offline voice being installed on the phone.</div>
 </div>
 <script>
 const statusEl=document.getElementById('status');
@@ -39,7 +39,6 @@ const assets=[
   'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js',
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm',
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-  'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_internal.js',
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_internal.wasm',
   'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_nosimd_internal.js',
@@ -80,8 +79,8 @@ async function prepareOffline(){
       fill.style.width=Math.round(done/assets.length*100)+'%';
       statusEl.textContent='Caching offline AI files… '+done+'/'+assets.length;
     }
-    localStorage.setItem('svx-offline-prepared-v3','1');
-    statusEl.textContent='✓ Offline sign + expression AI ready. Open SilentVoiceX and test once before Airplane Mode.';
+    localStorage.setItem('svx-offline-prepared-v4','1');
+    statusEl.textContent='✓ Offline hand-sign AI ready. Open SilentVoiceX and test once before Airplane Mode.';
     fill.style.width='100%';
   }catch(e){
     statusEl.textContent='Offline setup needs attention: '+e.message;
@@ -96,7 +95,7 @@ openBtn.onclick=()=>location.href='./index.html?offline=1';
 (async()=>{
   try{
     await ensureWorker();
-    if(localStorage.getItem('svx-offline-prepared-v3')==='1'){
+    if(localStorage.getItem('svx-offline-prepared-v4')==='1'){
       statusEl.textContent=navigator.onLine?'✓ Offline mode prepared':'✓ Running without internet';
       fill.style.width='100%';
     }else{

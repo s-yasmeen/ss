@@ -24,7 +24,7 @@
 </head>
 <body>
 <div class="shell">
-  <div class="top"><div class="brand"><h1>✋ <span>SilentVoice X</span></h1><p>AI that turns signs into speech</p></div><button id="headerOfflineBtn" class="btn primary">📴 Offline Setup</button></div>
+  <div class="top"><div class="brand"><h1>✋ <span>SilentVoice X</span></h1><p>Offline AI that turns hand signs into speech</p></div><button id="headerOfflineBtn" class="btn primary">📴 Offline Setup</button></div>
   <div class="tabs">
     <button class="tab active" data-page="translate">✋ Translate</button>
     <button class="tab" data-page="train">🧠 Train AI</button>
@@ -34,16 +34,16 @@
   <section id="translate" class="page active">
     <div class="grid">
       <div class="card">
-        <div id="cameraWrap" class="cameraWrap privacy">
-          <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas><div class="privacyTag">🔒 FACE PRIVACY • LOCAL ONLY</div>
+        <div id="cameraWrap" class="cameraWrap">
+          <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas>
         </div>
-        <div class="statusRow"><span id="camStatus" class="pill">● Camera off</span><span id="handStatus" class="pill">● Waiting for hand</span><span id="modelStatus" class="pill">● Model not trained</span><span id="expressionStatus" class="pill">🙂 Expression waiting</span><span id="offlineStatus" class="pill">📴 Offline checking</span><span id="facePrivacyStatus" class="pill on">🙂 Face privacy ON</span><span class="pill on">🚫 No camera upload</span><span id="autoSpeakStatus" class="pill on">🔊 Auto-speak ≥80%</span></div>
-        <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="privacyBtn" class="btn ghost">🙂 Face Privacy ON</button><button id="expressionToggleBtn" class="btn ghost">🙂 Expression ON</button><button id="offlineBtn" class="btn ghost">📴 Offline Setup</button><button id="clearBtn" class="btn ghost">Clear</button></div><div class="note" style="margin-top:8px">Face Privacy ON hides the raw camera preview and shows landmarks only. OFF shows a local live preview. Face images/video are never uploaded or saved by SilentVoiceX.</div>
+        <div class="statusRow"><span id="camStatus" class="pill">● Camera off</span><span id="handStatus" class="pill">● Waiting for hand</span><span id="modelStatus" class="pill">● Model not trained</span><span id="offlineStatus" class="pill">📴 Offline checking</span><span class="pill on">✋ Sign-only mode</span><span class="pill on">🚫 No camera upload</span><span id="autoSpeakStatus" class="pill on">🔊 Auto-speak ≥80%</span></div>
+        <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="offlineBtn" class="btn ghost">📴 Offline Setup</button><button id="clearBtn" class="btn ghost">Clear</button></div><div class="note" style="margin-top:8px">Hand landmarks are processed on this device. SilentVoiceX does not upload or save camera video.</div>
       </div>
       <div id="detectCard" class="card detect spark">
         <div class="smallcap">AI DETECTED</div><div id="word" class="word">READY</div><div id="conf" class="conf">Train the AI first</div>
         <div style="position:relative;width:98px"><div id="ring" class="ring"></div><div id="ringText" class="ringText" style="inset:38px 0;text-align:center">0%</div></div><div class="confidenceScale"><div class="confidenceScaleHead"><span>AUTO-SPEAK CONFIDENCE</span><strong id="autoSpeakValue">80%</strong></div><input id="autoSpeakSlider" type="range" min="80" max="100" step="1" value="80" aria-label="Auto-speak confidence from 80 to 100 percent"><div class="confidenceTicks"><span>80%</span><span>90%</span><span>100%</span></div></div>
-        <div class="sentence"><div id="seq" class="seq">SIGN SEQUENCE: —</div><div id="natural" class="natural">“Your phrase will appear here.”</div></div><div class="sentence" style="margin-top:10px"><div class="seq">FACIAL EXPRESSION CUE</div><div id="expressionCue" class="natural">—</div><div id="expressionStrength" class="note">Local landmark analysis • not a measure of inner emotion</div></div>
+        <div class="sentence"><div id="seq" class="seq">SIGN SEQUENCE: —</div><div id="natural" class="natural">“Your phrase will appear here.”</div></div>
         <div class="controls"><button id="speakBtn" class="btn hot">🔊 SPEAK</button><button id="addBtn" class="btn primary">＋ Add Sign</button></div><div class="note" style="margin-top:8px">SPEAK reads the detected sign, or the full phrase if signs have been added.</div>
       </div>
     </div>
@@ -54,31 +54,30 @@
       <div class="card">
         <div class="smallcap">DATASET LAB</div><h2>Teach SilentVoice a sign</h2>
         <div class="trainPreview">
-          <div id="trainCameraWrap" class="cameraWrap privacy">
+          <div id="trainCameraWrap" class="cameraWrap">
             <video id="trainVideo" autoplay playsinline muted></video>
             <canvas id="trainCanvas"></canvas>
-            <div class="privacyTag">🔒 FACE PRIVACY • LOCAL ONLY</div>
             <div id="recordOverlay" class="recordOverlay">Camera off — tap Start Camera</div>
           </div>
           <div class="statusRow">
             <span id="trainCamStatus" class="pill">● Camera off</span>
             <span id="trainHandStatus" class="pill">● Waiting for hand</span>
-            <span id="trainFaceStatus" class="pill">🙂 Waiting for face</span>
+            <span class="pill on">✋ Hand data only</span>
           </div>
-          <div class="controls"><button id="trainStartBtn" class="btn primary">Start Camera</button><button id="trainPrivacyBtn" class="btn ghost">🙂 Face Privacy ON</button><button id="trainExpressionToggleBtn" class="btn ghost">🙂 Expression ON</button></div><div class="note" style="margin-top:8px">Face frames are processed in memory only when Expression is ON. Turn Expression OFF to stop facial-expression inference. SilentVoiceX does not upload or save face images/video.</div>
+          <div class="controls"><button id="trainStartBtn" class="btn primary">Start Camera</button></div><div class="note" style="margin-top:8px">Only normalized hand-landmark sequences are stored for training. No facial data is collected.</div>
         </div>
         <div class="formgrid">
           <div class="field"><label>Participant ID</label><input id="participant" value="P001"></div>
           <div class="field"><label>Sign label</label><input id="label" value="HELLO" maxlength="24"></div>
           <div class="field"><label>Hold-out participant for final test</label><input id="holdout" value="P003"></div>
-          <div class="field"><label>Unknown threshold</label><input id="threshold" type="number" min=".5" max=".99" step=".01" value=".75"></div>
+          <div class="field"><label>Unknown threshold</label><input id="threshold" type="number" min=".5" max=".99" step=".01" value=".80"></div>
         </div>
         <div class="controls"><button id="recordBtn" class="btn hot">● Record 1 sample</button><button id="deleteSelectedBtn" class="btn ghost">Delete selected sign</button></div>
         <p class="note"><b>Important:</b> every participant should record the <b>same sign labels</b>. Example: P001 records HELLO, GOOD, HEART; P002 records HELLO, GOOD, HEART; P003 records HELLO, GOOD, HEART. Use P003 only as the unseen test signer.</p>
         <div id="personSummary" class="personSummary"></div><div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 24 • OFFLINE SETUP BUTTON</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 25 • SIGN-ONLY OFFLINE AI</div><p class="note">No Python. Hand-sign training and recognition run directly in this browser using a lightweight temporal neural network.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -102,64 +101,11 @@
 </div>
 
 <script type="module">
-import {HandLandmarker, FaceLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";
+import {HandLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";
 const $=id=>document.getElementById(id), sleep=ms=>new Promise(r=>setTimeout(r,ms));
-let handLandmarker,faceLandmarker,stream,ctx,drawing,trainCtx,trainDrawing,model=null,labels=[],dataset=JSON.parse(localStorage.getItem("svx-data")||"[]");
-let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[], inferenceBusy=false, inferenceErrors=0, autoSpeakLastLabel="", autoSpeakArmed=true, lastExpressionAt=0, latestFaceLandmarks=[];
-const SEQ=24, FEAT=126;
-let facePrivacyEnabled=localStorage.getItem("svx-face-privacy")!=="off";
-function syncFacePrivacy(){
- const main=$("cameraWrap"), train=$("trainCameraWrap");
- if(main) main.classList.toggle("privacy",facePrivacyEnabled);
- if(train) train.classList.toggle("privacy",facePrivacyEnabled);
- const label=facePrivacyEnabled?"🙂 Face Privacy ON":"🙂 Face Privacy OFF";
- const status=$("facePrivacyStatus");
- if(status){
-   status.textContent=label;
-   status.classList.toggle("on",facePrivacyEnabled);
- }
- const b=$("privacyBtn"), tb=$("trainPrivacyBtn");
- if(b) b.textContent=label;
- if(tb) tb.textContent=label;
- document.querySelectorAll(".privacyTag").forEach(el=>{
-   el.textContent="🔒 FACE PRIVACY • LOCAL ONLY";
- });
-}
-function toggleFacePrivacy(){
- facePrivacyEnabled=!facePrivacyEnabled;
- localStorage.setItem("svx-face-privacy",facePrivacyEnabled?"on":"off");
- syncFacePrivacy();
-}
-
-let expressionEnabled=localStorage.getItem("svx-expression-enabled")!=="off";
-function syncExpressionToggle(){
- const label=expressionEnabled?"🙂 Expression ON":"🙂 Expression OFF";
- const mainBtn=$("expressionToggleBtn"), trainBtn=$("trainExpressionToggleBtn");
- if(mainBtn)mainBtn.textContent=label;
- if(trainBtn)trainBtn.textContent=label;
- if(!expressionEnabled){
-   latestFaceLandmarks=[];
-   if($("expressionCue"))$("expressionCue").textContent="OFF";
-   if($("expressionStrength"))$("expressionStrength").textContent="Facial-expression analysis disabled • no face inference running";
-   if($("expressionStatus")){
-     $("expressionStatus").textContent="🙂 Expression OFF";
-     $("expressionStatus").classList.remove("on");
-   }
-   if($("trainFaceStatus")){
-     $("trainFaceStatus").textContent="🙂 Expression OFF";
-     $("trainFaceStatus").classList.remove("on");
-   }
- }else{
-   if($("expressionStatus") && $("expressionStatus").textContent==="🙂 Expression OFF")$("expressionStatus").textContent="🙂 Expression waiting";
-   if($("trainFaceStatus") && $("trainFaceStatus").textContent==="🙂 Expression OFF")$("trainFaceStatus").textContent="🙂 Waiting for face";
-   if($("expressionCue") && $("expressionCue").textContent==="OFF")$("expressionCue").textContent="—";
-   if($("expressionStrength") && $("expressionStrength").textContent.includes("disabled"))$("expressionStrength").textContent="Local landmark analysis • not a measure of inner emotion";
- }
-}
-function toggleExpression(){
- expressionEnabled=!expressionEnabled;
- localStorage.setItem("svx-expression-enabled",expressionEnabled?"on":"off");
- syncExpressionToggle();
+let handLandmarker,stream,ctx,drawing,trainCtx,trainDrawing,model=null,labels=[],dataset=JSON.parse(localStorage.getItem("svx-data")||"[]");
+let liveBuffer=[], predictionHistory=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[], inferenceBusy=false, inferenceErrors=0, autoSpeakLastLabel="", autoSpeakArmed=true;
+const SEQ=24, FEAT=126, PRED_WINDOW=3;
 }
 syncExpressionToggle();
 let autoSpeakThreshold=Math.min(1,Math.max(.80,parseFloat(localStorage.getItem("svx-auto-speak-threshold")||".80")));
@@ -183,7 +129,7 @@ syncAutoSpeakScale();
 function updateOfflineStatus(){
  const el=$("offlineStatus");
  if(!el)return;
- const prepared=localStorage.getItem("svx-offline-prepared-v3")==="1";
+ const prepared=localStorage.getItem("svx-offline-prepared-v4")==="1";
  if(!navigator.onLine){
    el.textContent="📴 Running offline";
    el.classList.add("on");
@@ -247,9 +193,13 @@ function logSamples(){
 }
 function markDatasetChanged(){
  localStorage.setItem("svx-data",JSON.stringify(dataset));
+ model=null; labels=[]; liveBuffer=[]; predictionHistory=[];
+ localStorage.removeItem("svx-labels");
+ if(window.tf && tf.io?.removeModel) tf.io.removeModel("indexeddb://silentvoice-x").catch(()=>{});
  $("trainText").textContent="Dataset changed — retrain AI.";
  $("modelStatus").textContent="● Retrain needed";
  $("modelStatus").classList.remove("on");
+ $("word").textContent="READY"; $("conf").textContent="Dataset changed — retrain AI";
 }
 function deleteOneSample(index){
  const s=dataset[index];
@@ -283,44 +233,6 @@ async function initLandmarker(){
  if(handLandmarker)return;
  const vision=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
  handLandmarker=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",delegate:"GPU"},runningMode:"VIDEO",numHands:2,minHandDetectionConfidence:.55,minHandPresenceConfidence:.55,minTrackingConfidence:.5});
- try{
-   faceLandmarker=await FaceLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",delegate:"GPU"},runningMode:"VIDEO",numFaces:1,outputFaceBlendshapes:true,minFaceDetectionConfidence:.5,minFacePresenceConfidence:.5,minTrackingConfidence:.5});
-   $("expressionStatus").textContent="🙂 Expression ready";
-   $("expressionStatus").classList.add("on");
- }catch(err){
-   console.warn("Expression module unavailable",err);
-   $("expressionStatus").textContent="Expression unavailable";
- }
-}
-function blendshapeScore(categories,name){
- const item=categories.find(x=>x.categoryName===name);
- return item?item.score:0;
-}
-function updateExpression(faceResult){
- const sets=faceResult?.faceBlendshapes;
- if(!sets?.length){
-   $("expressionCue").textContent="No face";
-   $("expressionStrength").textContent="Keep your face visible to the camera • processing stays on-device";
-   return;
- }
- const c=sets[0].categories||[];
- const smile=(blendshapeScore(c,"mouthSmileLeft")+blendshapeScore(c,"mouthSmileRight"))/2;
- const frown=(blendshapeScore(c,"mouthFrownLeft")+blendshapeScore(c,"mouthFrownRight"))/2;
- const surprise=Math.min(1,(blendshapeScore(c,"jawOpen")+blendshapeScore(c,"browInnerUp"))/2);
- const candidates=[
-   {label:"🙂 Smile cue",score:smile},
-   {label:"🙁 Frown cue",score:frown},
-   {label:"😮 Surprise cue",score:surprise}
- ];
- candidates.sort((a,b)=>b.score-a.score);
- const best=candidates[0];
- if(best.score<0.38){
-   $("expressionCue").textContent="😐 Neutral / no strong cue";
-   $("expressionStrength").textContent="No strong facial-expression cue detected • local processing";
- }else{
-   $("expressionCue").textContent=best.label;
-   $("expressionStrength").textContent="Cue strength "+Math.round(best.score*100)+"% • not a measure of inner emotion";
- }
 }
 async function startCamera(){
  if(stream) return;
@@ -341,36 +253,8 @@ async function startCamera(){
 async function loop(){
  if(!stream)return;
  const now=performance.now(),r=handLandmarker.detectForVideo($("video"),now);
- if(expressionEnabled && faceLandmarker && now-lastExpressionAt>220){
-   lastExpressionAt=now;
-   try{
-     const faceResult=faceLandmarker.detectForVideo($("video"),now);
-     latestFaceLandmarks=faceResult?.faceLandmarks?.[0]||[];
-     updateExpression(faceResult);
-     if(latestFaceLandmarks.length){
-       $("expressionStatus").textContent="🙂 Face detected";
-       $("expressionStatus").classList.add("on");
-       if($("trainFaceStatus")){
-         $("trainFaceStatus").textContent="🙂 Face detected";
-         $("trainFaceStatus").classList.add("on");
-       }
-     }else{
-       $("expressionStatus").textContent="🙂 Waiting for face";
-       $("expressionStatus").classList.remove("on");
-       if($("trainFaceStatus")){
-         $("trainFaceStatus").textContent="🙂 Waiting for face";
-         $("trainFaceStatus").classList.remove("on");
-       }
-     }
-   }catch(err){console.warn("Expression inference error",err)}
- }
  ctx.clearRect(0,0,$("canvas").width,$("canvas").height);
  trainCtx.clearRect(0,0,$("trainCanvas").width,$("trainCanvas").height);
- if(expressionEnabled && latestFaceLandmarks.length){
-   // Privacy-safe visualization: landmark points only; raw face pixels remain hidden.
-   drawing.drawLandmarks(latestFaceLandmarks,{color:"#a78bfa",radius:1.25});
-   trainDrawing.drawLandmarks(latestFaceLandmarks,{color:"#a78bfa",radius:1.25});
- }
  handVisible=!!r.landmarks?.length;
  if(handVisible){
    $("handStatus").textContent="● Hand detected";$("handStatus").classList.add("on");
@@ -382,6 +266,12 @@ async function loop(){
  } else {
    $("handStatus").textContent="● Waiting for hand";$("handStatus").classList.remove("on");
    $("trainHandStatus").textContent="● Waiting for hand";$("trainHandStatus").classList.remove("on");
+   if(liveBuffer.length || predictionHistory.length){
+     liveBuffer=[]; predictionHistory=[]; autoSpeakArmed=true;
+     currentPrediction="READY"; currentConfidence=0;
+     $("word").textContent="READY"; $("conf").textContent="Show a trained hand sign";
+     $("ringText").textContent="0%"; $("ring").style.background="conic-gradient(#45e6ff 0deg,#16304a 0)";
+   }
  }
  const f=featureFrom(r);
  if(recording){
@@ -460,8 +350,27 @@ async function predict(seq){
    let idx=0;
    for(let i=1;i<p.length;i++) if(p[i]>p[idx]) idx=i;
    const conf=p[idx];
-   const th=parseFloat($("threshold").value)||.75;
-   setPrediction(conf>=th?(labels[idx]||"UNKNOWN"):"UNKNOWN",conf);
+   const th=parseFloat($("threshold").value)||.80;
+   const candidate=conf>=th?(labels[idx]||"UNKNOWN"):"UNKNOWN";
+   if(candidate==="UNKNOWN"){
+     predictionHistory=[];
+     setPrediction("UNKNOWN",conf);
+   }else{
+     predictionHistory.push({name:candidate,conf});
+     if(predictionHistory.length>PRED_WINDOW) predictionHistory.shift();
+     const same=predictionHistory.filter(x=>x.name===candidate);
+     if(same.length>=2){
+       const avg=same.reduce((a,x)=>a+x.conf,0)/same.length;
+       setPrediction(candidate,avg);
+     }else{
+       currentPrediction="READY"; currentConfidence=conf;
+       $("word").textContent="VERIFYING";
+       $("conf").textContent="Hold the sign steady • "+(conf*100).toFixed(1)+"%";
+       const pct=Math.round(conf*100);
+       $("ringText").textContent=pct+"%";
+       $("ring").style.background="conic-gradient(#45e6ff "+pct*3.6+"deg,#16304a 0)";
+     }
+   }
    inferenceErrors=0;
  }finally{
    if(x) x.dispose();
@@ -470,17 +379,10 @@ async function predict(seq){
  }
 }
 $("startBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
-$("privacyBtn").onclick=toggleFacePrivacy;
-$("expressionToggleBtn").onclick=toggleExpression;
-$("trainPrivacyBtn").onclick=toggleFacePrivacy;
-$("trainExpressionToggleBtn").onclick=toggleExpression;
-syncFacePrivacy();
 $("offlineBtn").onclick=()=>{location.href="./offline.html"};
 if($("headerOfflineBtn")) $("headerOfflineBtn").onclick=()=>{location.href="./offline.html"};
 $("trainStartBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
-$("cameraWrap").classList.add("privacy");
-$("trainCameraWrap").classList.add("privacy");
-$("clearBtn").onclick=()=>{phrase=[];autoSpeakArmed=true;autoSpeakLastLabel="";updatePhrase();setPrediction("READY",0)};
+$("clearBtn").onclick=()=>{phrase=[];predictionHistory=[];autoSpeakArmed=true;autoSpeakLastLabel="";updatePhrase();setPrediction("READY",0)};
 $("addBtn").onclick=()=>{if(currentPrediction!=="READY"&&currentPrediction!=="UNKNOWN"){phrase.push(currentPrediction);updatePhrase()}};
 function refreshVoices(){
  if(!("speechSynthesis" in window)) return;
