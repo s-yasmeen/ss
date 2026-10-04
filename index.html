@@ -84,7 +84,7 @@
         <div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">ACCURACY BUILD • 3+ SIGNS • 6+ SAMPLES/SIGN • OFFLINE</div><p class="note">No Python. Training uses a stronger temporal Conv1D model with stratified validation, dropout, batch normalization and early stopping. More varied samples usually improve signer-independent accuracy.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">ACCURACY BUILD • STABLE EARLY STOP • 6+ SAMPLES/SIGN • OFFLINE</div><p class="note">No Python. Training uses a stronger temporal Conv1D model with stratified validation, dropout, batch normalization and early stopping. More varied samples usually improve signer-independent accuracy.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -565,7 +565,7 @@ $("trainBtn").onclick=async()=>{
      validationData:[V.x,V.y],
      shuffle:true,
      callbacks:[
-       tf.callbacks.earlyStopping({monitor:"val_loss",patience:5,restoreBestWeights:true}),
+       tf.callbacks.earlyStopping({monitor:"val_loss",patience:5,minDelta:0.001}),
        {
          onTrainBegin:async()=>{$("trainText").textContent="Training stronger model…";await tf.nextFrame()},
          onEpochEnd:async(e,l)=>{
