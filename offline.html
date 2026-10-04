@@ -2,107 +2,32 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>SilentVoiceX Offline Setup</title>
 <meta name="theme-color" content="#07111f">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <style>
 :root{--bg:#07111f;--card:#0d1b2e;--cyan:#45e6ff;--violet:#8b5cf6;--pink:#ff4fa3;--text:#f7fbff;--muted:#9bb0c9;--good:#3ee6a0}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 15% 15%,#11284a 0,#07111f 50%,#050a12 100%);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text);padding:20px}.card{width:min(620px,100%);background:linear-gradient(160deg,#10213aee,#0a1627ee);border:1px solid #1c3a5d;border-radius:26px;padding:24px;box-shadow:0 24px 70px #0007}.logo{width:84px;height:84px;border-radius:22px}.tag{display:inline-flex;gap:7px;align-items:center;padding:7px 10px;border:1px solid #1f7b61;border-radius:999px;color:#88ffd3;font-weight:900;font-size:12px;margin:10px 0}.title{font-size:clamp(34px,7vw,58px);font-weight:950;letter-spacing:-2px;margin:4px 0}.title span{background:linear-gradient(90deg,var(--cyan),#a78bfa,var(--pink));-webkit-background-clip:text;color:transparent}.sub{color:var(--muted);line-height:1.6}.status{margin:18px 0;padding:14px 16px;border-radius:16px;background:#071321;border:1px solid #1d3855;font-weight:850}.bar{height:11px;border-radius:999px;background:#071321;border:1px solid #1b3652;overflow:hidden}.fill{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));transition:.25s}.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.btn{border:0;border-radius:14px;padding:12px 16px;color:white;font-weight:900;cursor:pointer}.primary{background:linear-gradient(135deg,#0ea5e9,#7c3aed)}.ghost{background:#0b1a2c;border:1px solid #284663}.btn:disabled{opacity:.45;cursor:not-allowed}.note{font-size:12px;color:var(--muted);line-height:1.55;margin-top:16px}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 15% 15%,#11284a 0,#07111f 50%,#050a12 100%);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text);padding:20px}.card{width:min(620px,100%);background:linear-gradient(160deg,#10213aee,#0a1627ee);border:1px solid #1c3a5d;border-radius:26px;padding:24px;box-shadow:0 24px 70px #0007}.logo{width:84px;height:84px;border-radius:22px}.tag{display:inline-flex;padding:7px 10px;border:1px solid #1f7b61;border-radius:999px;color:#88ffd3;font-weight:900;font-size:12px;margin:10px 0}.title{font-size:clamp(34px,7vw,58px);font-weight:950;letter-spacing:-2px;margin:4px 0}.title span{background:linear-gradient(90deg,var(--cyan),#a78bfa,var(--pink));-webkit-background-clip:text;color:transparent}.sub,.note{color:var(--muted);line-height:1.6}.status{margin:18px 0;padding:14px 16px;border-radius:16px;background:#071321;border:1px solid #1d3855;font-weight:850}.bar{height:11px;border-radius:999px;background:#071321;border:1px solid #1b3652;overflow:hidden}.fill{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));transition:.25s}.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.btn{border:0;border-radius:14px;padding:12px 16px;color:white;font-weight:900;cursor:pointer}.primary{background:linear-gradient(135deg,#0ea5e9,#7c3aed)}.ghost{background:#0b1a2c;border:1px solid #284663}.btn:disabled{opacity:.45}.note{font-size:12px;margin-top:16px}
 </style>
 </head>
-<body>
-<div class="card">
-  <img class="logo" src="./icon.svg" alt="SilentVoiceX icon">
-  <div class="tag">🔒 ON-DEVICE • OFFLINE-FIRST</div>
-  <div class="title"><span>SilentVoiceX</span></div>
-  <div class="sub">Prepare hand-sign recognition and speech support for use without Wi‑Fi or mobile data. Your recorded hand-landmark samples and trained model stay on this device.</div>
-  <div id="status" class="status">Checking offline support…</div>
-  <div class="bar"><div id="fill" class="fill"></div></div>
-  <div class="buttons">
-    <button id="prepare" class="btn primary">Prepare Offline Mode</button>
-    <button id="open" class="btn ghost">Open SilentVoiceX</button>
-  </div>
-  <div class="note">For the most reliable exhibition demo, prepare while online. This caches the hand-sign AI and required browser files. Then open SilentVoiceX once and test again with Airplane Mode enabled. Browser speech also depends on an offline voice being installed on the phone.</div>
+<body><div class="card">
+<img class="logo" src="./icon.svg" alt="SilentVoiceX icon">
+<div class="tag">✋ SIGN-ONLY • ON-DEVICE • OFFLINE</div>
+<div class="title"><span>SilentVoiceX</span></div>
+<div class="sub">Prepare the complete hand-sign AI runtime for use without Wi-Fi or mobile data. TensorFlow.js, MediaPipe, WebAssembly files and the hand model are hosted with SilentVoiceX and cached on this device.</div>
+<div id="status" class="status">Checking offline runtime…</div>
+<div class="bar"><div id="fill" class="fill"></div></div>
+<div class="buttons"><button id="prepare" class="btn primary">Prepare Offline Mode</button><button id="open" class="btn ghost">Open SilentVoiceX</button></div>
+<div class="note">Prepare once while online. When this page reports “Offline Ready”, open SilentVoiceX, start the camera once, then enable Airplane Mode for the judge demonstration. Speech also requires an offline system voice on the device.</div>
 </div>
 <script>
-const statusEl=document.getElementById('status');
-const fill=document.getElementById('fill');
-const prepare=document.getElementById('prepare');
-const openBtn=document.getElementById('open');
-const assets=[
-  './',
-  './index.html',
-  './manifest.webmanifest',
-  './icon.svg',
-  'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js',
-  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm',
-  'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_internal.js',
-  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_internal.wasm',
-  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_nosimd_internal.js',
-  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm/vision_wasm_nosimd_internal.wasm'
-];
-
-async function ensureWorker(){
-  if(!('serviceWorker' in navigator)) throw new Error('This browser does not support offline app mode.');
-  const reg=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
-  await navigator.serviceWorker.ready;
-  if(!navigator.serviceWorker.controller){
-    statusEl.textContent='Offline engine installed. Activating…';
-    await new Promise(resolve=>{
-      const timer=setTimeout(resolve,2200);
-      navigator.serviceWorker.addEventListener('controllerchange',()=>{clearTimeout(timer);resolve();},{once:true});
-    });
-    if(!sessionStorage.getItem('svx-sw-reloaded')){
-      sessionStorage.setItem('svx-sw-reloaded','1');
-      location.reload();
-      return false;
-    }
-  }
-  return true;
-}
-
-async function prepareOffline(){
-  prepare.disabled=true;
-  try{
-    const controlled=await ensureWorker();
-    if(!controlled)return;
-    let done=0,ok=0;
-    for(const url of assets){
-      try{
-        const r=await fetch(url,{cache:'reload'});
-        if(r.ok || r.type==='opaque') ok++;
-      }catch(_){ }
-      done++;
-      fill.style.width=Math.round(done/assets.length*100)+'%';
-      statusEl.textContent='Caching offline AI files… '+done+'/'+assets.length;
-    }
-    localStorage.setItem('svx-offline-prepared-v4','1');
-    statusEl.textContent='✓ Offline hand-sign AI ready. Open SilentVoiceX and test once before Airplane Mode.';
-    fill.style.width='100%';
-  }catch(e){
-    statusEl.textContent='Offline setup needs attention: '+e.message;
-  }finally{
-    prepare.disabled=false;
-  }
-}
-
-prepare.onclick=prepareOffline;
-openBtn.onclick=()=>location.href='./index.html?offline=1';
-
-(async()=>{
-  try{
-    await ensureWorker();
-    if(localStorage.getItem('svx-offline-prepared-v4')==='1'){
-      statusEl.textContent=navigator.onLine?'✓ Offline mode prepared':'✓ Running without internet';
-      fill.style.width='100%';
-    }else{
-      statusEl.textContent='Ready to prepare offline mode.';
-    }
-  }catch(e){statusEl.textContent='Offline setup unavailable: '+e.message;}
-})();
-</script>
-</body>
-</html>
+const statusEl=document.getElementById('status'),fill=document.getElementById('fill'),prepare=document.getElementById('prepare'),openBtn=document.getElementById('open');
+const CACHE='silentvoicex-offline-v9';
+const assets=['./','./index.html','./offline.html','./manifest.webmanifest','./icon.svg','./vendor/tf.min.js','./vendor/tasks-vision.mjs','./vendor/wasm/vision_wasm_internal.js','./vendor/wasm/vision_wasm_internal.wasm','./vendor/wasm/vision_wasm_nosimd_internal.js','./vendor/wasm/vision_wasm_nosimd_internal.wasm','./vendor/models/hand_landmarker.task'];
+async function ensureWorker(){if(!('serviceWorker' in navigator))throw new Error('Offline mode is not supported in this browser.');await navigator.serviceWorker.register('./sw.js',{scope:'./'});await navigator.serviceWorker.ready;}
+async function prepareOffline(){prepare.disabled=true;try{await ensureWorker();const cache=await caches.open(CACHE);let done=0;for(const url of assets){const r=await fetch(url,{cache:'reload'});if(!r.ok)throw new Error('Could not cache '+url);await cache.put(url,r.clone());done++;fill.style.width=Math.round(done/assets.length*100)+'%';statusEl.textContent='Saving offline AI files… '+done+'/'+assets.length;}localStorage.setItem('svx-offline-prepared-v5','1');statusEl.textContent='✓ Offline Ready — all sign-recognition files verified on this device.';fill.style.width='100%';}catch(e){localStorage.removeItem('svx-offline-prepared-v5');statusEl.textContent='Offline setup failed: '+e.message;}finally{prepare.disabled=false;}}
+prepare.onclick=prepareOffline;openBtn.onclick=()=>location.href='./index.html?v=26';
+(async()=>{try{await ensureWorker();if(localStorage.getItem('svx-offline-prepared-v5')==='1'){statusEl.textContent=navigator.onLine?'✓ Offline Ready':'✓ Running without internet';fill.style.width='100%';}else statusEl.textContent='Tap Prepare Offline Mode while connected to the internet.';}catch(e){statusEl.textContent='Offline setup unavailable: '+e.message;}})();
+</script></body></html>
