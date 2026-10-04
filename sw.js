@@ -1,4 +1,4 @@
-const CACHE_NAME = 'silentvoicex-offline-v6';
+const CACHE_NAME = 'silentvoicex-offline-v7';
 
 const CORE_ASSETS = [
   './',

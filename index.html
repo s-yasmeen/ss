@@ -38,7 +38,7 @@
           <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas><div class="privacyTag">🔒 FACE PRIVACY • LOCAL ONLY</div>
         </div>
         <div class="statusRow"><span id="camStatus" class="pill">● Camera off</span><span id="handStatus" class="pill">● Waiting for hand</span><span id="modelStatus" class="pill">● Model not trained</span><span id="expressionStatus" class="pill">🙂 Expression waiting</span><span id="offlineStatus" class="pill">📴 Offline checking</span><span id="facePrivacyStatus" class="pill on">🙂 Face privacy ON</span><span class="pill on">🚫 No camera upload</span><span id="autoSpeakStatus" class="pill on">🔊 Auto-speak ≥80%</span></div>
-        <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="privacyBtn" class="btn ghost">🙂 Face Privacy ON</button><button id="offlineBtn" class="btn ghost">📴 Offline Setup</button><button id="clearBtn" class="btn ghost">Clear</button></div><div class="note" style="margin-top:8px">Face Privacy ON hides the raw camera preview and shows landmarks only. OFF shows a local live preview. Face images/video are never uploaded or saved by SilentVoiceX.</div>
+        <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="privacyBtn" class="btn ghost">🙂 Face Privacy ON</button><button id="expressionToggleBtn" class="btn ghost">🙂 Expression ON</button><button id="offlineBtn" class="btn ghost">📴 Offline Setup</button><button id="clearBtn" class="btn ghost">Clear</button></div><div class="note" style="margin-top:8px">Face Privacy ON hides the raw camera preview and shows landmarks only. OFF shows a local live preview. Face images/video are never uploaded or saved by SilentVoiceX.</div>
       </div>
       <div id="detectCard" class="card detect spark">
         <div class="smallcap">AI DETECTED</div><div id="word" class="word">READY</div><div id="conf" class="conf">Train the AI first</div>
@@ -65,7 +65,7 @@
             <span id="trainHandStatus" class="pill">● Waiting for hand</span>
             <span id="trainFaceStatus" class="pill">🙂 Waiting for face</span>
           </div>
-          <div class="controls"><button id="trainStartBtn" class="btn primary">Start Camera</button><button id="trainPrivacyBtn" class="btn ghost">🙂 Face Privacy ON</button></div><div class="note" style="margin-top:8px">Face frames are processed in memory only. SilentVoiceX does not upload or save face images/video.</div>
+          <div class="controls"><button id="trainStartBtn" class="btn primary">Start Camera</button><button id="trainPrivacyBtn" class="btn ghost">🙂 Face Privacy ON</button><button id="trainExpressionToggleBtn" class="btn ghost">🙂 Expression ON</button></div><div class="note" style="margin-top:8px">Face frames are processed in memory only when Expression is ON. Turn Expression OFF to stop facial-expression inference. SilentVoiceX does not upload or save face images/video.</div>
         </div>
         <div class="formgrid">
           <div class="field"><label>Participant ID</label><input id="participant" value="P001"></div>
@@ -78,7 +78,7 @@
         <div id="personSummary" class="personSummary"></div><div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 22 • FACE PRIVACY TOGGLE</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 23 • EXPRESSION TOGGLE</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -131,6 +131,37 @@ function toggleFacePrivacy(){
  syncFacePrivacy();
 }
 
+let expressionEnabled=localStorage.getItem("svx-expression-enabled")!=="off";
+function syncExpressionToggle(){
+ const label=expressionEnabled?"🙂 Expression ON":"🙂 Expression OFF";
+ const mainBtn=$("expressionToggleBtn"), trainBtn=$("trainExpressionToggleBtn");
+ if(mainBtn)mainBtn.textContent=label;
+ if(trainBtn)trainBtn.textContent=label;
+ if(!expressionEnabled){
+   latestFaceLandmarks=[];
+   if($("expressionCue"))$("expressionCue").textContent="OFF";
+   if($("expressionStrength"))$("expressionStrength").textContent="Facial-expression analysis disabled • no face inference running";
+   if($("expressionStatus")){
+     $("expressionStatus").textContent="🙂 Expression OFF";
+     $("expressionStatus").classList.remove("on");
+   }
+   if($("trainFaceStatus")){
+     $("trainFaceStatus").textContent="🙂 Expression OFF";
+     $("trainFaceStatus").classList.remove("on");
+   }
+ }else{
+   if($("expressionStatus") && $("expressionStatus").textContent==="🙂 Expression OFF")$("expressionStatus").textContent="🙂 Expression waiting";
+   if($("trainFaceStatus") && $("trainFaceStatus").textContent==="🙂 Expression OFF")$("trainFaceStatus").textContent="🙂 Waiting for face";
+   if($("expressionCue") && $("expressionCue").textContent==="OFF")$("expressionCue").textContent="—";
+   if($("expressionStrength") && $("expressionStrength").textContent.includes("disabled"))$("expressionStrength").textContent="Local landmark analysis • not a measure of inner emotion";
+ }
+}
+function toggleExpression(){
+ expressionEnabled=!expressionEnabled;
+ localStorage.setItem("svx-expression-enabled",expressionEnabled?"on":"off");
+ syncExpressionToggle();
+}
+syncExpressionToggle();
 let autoSpeakThreshold=Math.min(1,Math.max(.80,parseFloat(localStorage.getItem("svx-auto-speak-threshold")||".80")));
 function syncAutoSpeakScale(){
  const pct=Math.round(autoSpeakThreshold*100);
@@ -310,7 +341,7 @@ async function startCamera(){
 async function loop(){
  if(!stream)return;
  const now=performance.now(),r=handLandmarker.detectForVideo($("video"),now);
- if(faceLandmarker && now-lastExpressionAt>220){
+ if(expressionEnabled && faceLandmarker && now-lastExpressionAt>220){
    lastExpressionAt=now;
    try{
      const faceResult=faceLandmarker.detectForVideo($("video"),now);
@@ -335,7 +366,7 @@ async function loop(){
  }
  ctx.clearRect(0,0,$("canvas").width,$("canvas").height);
  trainCtx.clearRect(0,0,$("trainCanvas").width,$("trainCanvas").height);
- if(latestFaceLandmarks.length){
+ if(expressionEnabled && latestFaceLandmarks.length){
    // Privacy-safe visualization: landmark points only; raw face pixels remain hidden.
    drawing.drawLandmarks(latestFaceLandmarks,{color:"#a78bfa",radius:1.25});
    trainDrawing.drawLandmarks(latestFaceLandmarks,{color:"#a78bfa",radius:1.25});
@@ -440,7 +471,9 @@ async function predict(seq){
 }
 $("startBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
 $("privacyBtn").onclick=toggleFacePrivacy;
+$("expressionToggleBtn").onclick=toggleExpression;
 $("trainPrivacyBtn").onclick=toggleFacePrivacy;
+$("trainExpressionToggleBtn").onclick=toggleExpression;
 syncFacePrivacy();
 $("offlineBtn").onclick=()=>{location.href="./offline.html"};
 $("trainStartBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
