@@ -106,8 +106,6 @@ const $=id=>document.getElementById(id), sleep=ms=>new Promise(r=>setTimeout(r,m
 let handLandmarker,stream,ctx,drawing,trainCtx,trainDrawing,model=null,labels=[],dataset=JSON.parse(localStorage.getItem("svx-data")||"[]");
 let liveBuffer=[], predictionHistory=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[], inferenceBusy=false, inferenceErrors=0, autoSpeakLastLabel="", autoSpeakArmed=true;
 const SEQ=24, FEAT=126, PRED_WINDOW=3;
-}
-syncExpressionToggle();
 let autoSpeakThreshold=Math.min(1,Math.max(.80,parseFloat(localStorage.getItem("svx-auto-speak-threshold")||".80")));
 function syncAutoSpeakScale(){
  const pct=Math.round(autoSpeakThreshold*100);
