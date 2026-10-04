@@ -1,4 +1,4 @@
-const CACHE_NAME = 'silentvoicex-pre-face-restore-v2';
+const CACHE_NAME = 'silentvoicex-pre-face-autospeak-v3';
 
 const CORE_ASSETS = [
   './',
