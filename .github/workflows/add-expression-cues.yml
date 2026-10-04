@@ -1,9 +1,10 @@
-name: Add expression cues
+name: Merge offline expression mode
 
 on:
   push:
     paths:
       - '.github/workflows/add-expression-cues.yml'
+      - 'scripts/merge_offline.py'
 
 permissions:
   contents: write
@@ -13,12 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply expression feature
-        run: python scripts/add_expression.py
-      - name: Commit feature
+      - name: Merge offline and expression features
+        run: python scripts/merge_offline.py
+      - name: Commit merged app
         run: |
           git config user.name "SilentVoiceX Builder"
           git config user.email "actions@users.noreply.github.com"
           git add index.html sw.js offline.html
-          git commit -m "Add privacy-preserving facial expression cues" || exit 0
+          git commit -m "Merge expression cues with offline SilentVoiceX" || exit 0
           git push
