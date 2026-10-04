@@ -35,10 +35,10 @@
     <div class="grid">
       <div class="card">
         <div id="cameraWrap" class="cameraWrap privacy">
-          <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas><div class="privacyTag">🔒 PRIVACY MODE • FACE MESH</div>
+          <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas><div class="privacyTag">🔒 FACE PRIVACY • LOCAL ONLY</div>
         </div>
-        <div class="statusRow"><span id="camStatus" class="pill">● Camera off</span><span id="handStatus" class="pill">● Waiting for hand</span><span id="modelStatus" class="pill">● Model not trained</span><span id="expressionStatus" class="pill">🙂 Expression waiting</span><span id="offlineStatus" class="pill">📴 Offline checking</span><span class="pill on">🔒 Privacy always on</span><span id="autoSpeakStatus" class="pill on">🔊 Auto-speak ≥80%</span></div>
-        <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="privacyBtn" class="btn ghost" disabled>🔒 Privacy ON</button><button id="offlineBtn" class="btn ghost">📴 Offline Setup</button><button id="clearBtn" class="btn ghost">Clear</button></div>
+        <div class="statusRow"><span id="camStatus" class="pill">● Camera off</span><span id="handStatus" class="pill">● Waiting for hand</span><span id="modelStatus" class="pill">● Model not trained</span><span id="expressionStatus" class="pill">🙂 Expression waiting</span><span id="offlineStatus" class="pill">📴 Offline checking</span><span id="facePrivacyStatus" class="pill on">🙂 Face privacy ON</span><span class="pill on">🚫 No camera upload</span><span id="autoSpeakStatus" class="pill on">🔊 Auto-speak ≥80%</span></div>
+        <div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="privacyBtn" class="btn ghost">🙂 Face Privacy ON</button><button id="offlineBtn" class="btn ghost">📴 Offline Setup</button><button id="clearBtn" class="btn ghost">Clear</button></div><div class="note" style="margin-top:8px">Face Privacy ON hides the raw camera preview and shows landmarks only. OFF shows a local live preview. Face images/video are never uploaded or saved by SilentVoiceX.</div>
       </div>
       <div id="detectCard" class="card detect spark">
         <div class="smallcap">AI DETECTED</div><div id="word" class="word">READY</div><div id="conf" class="conf">Train the AI first</div>
@@ -57,7 +57,7 @@
           <div id="trainCameraWrap" class="cameraWrap privacy">
             <video id="trainVideo" autoplay playsinline muted></video>
             <canvas id="trainCanvas"></canvas>
-            <div class="privacyTag" style="display:block">🔒 PRIVACY MODE • FACE MESH</div>
+            <div class="privacyTag">🔒 FACE PRIVACY • LOCAL ONLY</div>
             <div id="recordOverlay" class="recordOverlay">Camera off — tap Start Camera</div>
           </div>
           <div class="statusRow">
@@ -65,7 +65,7 @@
             <span id="trainHandStatus" class="pill">● Waiting for hand</span>
             <span id="trainFaceStatus" class="pill">🙂 Waiting for face</span>
           </div>
-          <div class="controls"><button id="trainStartBtn" class="btn primary">Start Camera</button></div>
+          <div class="controls"><button id="trainStartBtn" class="btn primary">Start Camera</button><button id="trainPrivacyBtn" class="btn ghost">🙂 Face Privacy ON</button></div><div class="note" style="margin-top:8px">Face frames are processed in memory only. SilentVoiceX does not upload or save face images/video.</div>
         </div>
         <div class="formgrid">
           <div class="field"><label>Participant ID</label><input id="participant" value="P001"></div>
@@ -78,7 +78,7 @@
         <div id="personSummary" class="personSummary"></div><div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 21 • PRIVACY FACE MESH</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 22 • FACE PRIVACY TOGGLE</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -107,6 +107,30 @@ const $=id=>document.getElementById(id), sleep=ms=>new Promise(r=>setTimeout(r,m
 let handLandmarker,faceLandmarker,stream,ctx,drawing,trainCtx,trainDrawing,model=null,labels=[],dataset=JSON.parse(localStorage.getItem("svx-data")||"[]");
 let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[], inferenceBusy=false, inferenceErrors=0, autoSpeakLastLabel="", autoSpeakArmed=true, lastExpressionAt=0, latestFaceLandmarks=[];
 const SEQ=24, FEAT=126;
+let facePrivacyEnabled=localStorage.getItem("svx-face-privacy")!=="off";
+function syncFacePrivacy(){
+ const main=$("cameraWrap"), train=$("trainCameraWrap");
+ if(main) main.classList.toggle("privacy",facePrivacyEnabled);
+ if(train) train.classList.toggle("privacy",facePrivacyEnabled);
+ const label=facePrivacyEnabled?"🙂 Face Privacy ON":"🙂 Face Privacy OFF";
+ const status=$("facePrivacyStatus");
+ if(status){
+   status.textContent=label;
+   status.classList.toggle("on",facePrivacyEnabled);
+ }
+ const b=$("privacyBtn"), tb=$("trainPrivacyBtn");
+ if(b) b.textContent=label;
+ if(tb) tb.textContent=label;
+ document.querySelectorAll(".privacyTag").forEach(el=>{
+   el.textContent="🔒 FACE PRIVACY • LOCAL ONLY";
+ });
+}
+function toggleFacePrivacy(){
+ facePrivacyEnabled=!facePrivacyEnabled;
+ localStorage.setItem("svx-face-privacy",facePrivacyEnabled?"on":"off");
+ syncFacePrivacy();
+}
+
 let autoSpeakThreshold=Math.min(1,Math.max(.80,parseFloat(localStorage.getItem("svx-auto-speak-threshold")||".80")));
 function syncAutoSpeakScale(){
  const pct=Math.round(autoSpeakThreshold*100);
@@ -415,6 +439,9 @@ async function predict(seq){
  }
 }
 $("startBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
+$("privacyBtn").onclick=toggleFacePrivacy;
+$("trainPrivacyBtn").onclick=toggleFacePrivacy;
+syncFacePrivacy();
 $("offlineBtn").onclick=()=>{location.href="./offline.html"};
 $("trainStartBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));
 $("cameraWrap").classList.add("privacy");
