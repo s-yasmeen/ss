@@ -1,10 +1,10 @@
-name: Add face privacy toggle
+name: Add expression toggle
 
 on:
   push:
     paths:
       - '.github/workflows/add-expression-cues.yml'
-      - 'scripts/add_face_privacy_toggle.py'
+      - 'scripts/add_expression_toggle.py'
 
 permissions:
   contents: write
@@ -14,12 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Add local-only face privacy toggle
-        run: python scripts/add_face_privacy_toggle.py
-      - name: Commit face privacy toggle
+      - name: Add facial expression enable disable control
+        run: python scripts/add_expression_toggle.py
+      - name: Commit expression toggle
         run: |
           git config user.name "SilentVoiceX Builder"
           git config user.email "actions@users.noreply.github.com"
           git add index.html sw.js
-          git commit -m "Add local-only face privacy toggle" || exit 0
+          git commit -m "Add facial expression enable disable control" || exit 0
           git push
