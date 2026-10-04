@@ -73,7 +73,7 @@
           <div class="field"><label>Recognition threshold</label><input id="threshold" type="number" min=".5" max=".99" step=".01" value=".80"></div>
         </div>
         <div class="controls"><button id="recordBtn" class="btn hot">● Record 1 sample</button><button id="deleteSelectedBtn" class="btn ghost">Delete this participant + sign</button></div>
-        <p class="note"><b>Accuracy rule:</b> train at least <b>3 different signs</b>. Each sign needs at least <b>8 training samples</b> outside the hold-out participant and must be recorded by at least <b>2 training participants</b>. Use the same labels for every participant. The suggested labels above are optional; you can type your own sign label.</p>
+        <p class="note"><b>Accuracy rule:</b> train at least <b>3 different signs</b>. Each sign needs at least <b>6 training samples</b> outside the hold-out participant and must be recorded by at least <b>2 training participants</b>. Use the same labels for every participant. The suggested labels above are optional; you can type your own sign label.</p>
         <div id="personSummary" class="personSummary"></div>
         <div class="recordSelectBar">
           <button id="selectAllRecordsBtn" class="btn ghost">☑ Select All</button>
@@ -84,7 +84,7 @@
         <div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">ACCURACY BUILD • 3+ SIGNS • 8+ SAMPLES/SIGN • OFFLINE</div><p class="note">No Python. Training uses a stronger temporal Conv1D model with stratified validation, dropout, batch normalization and early stopping. More varied samples usually improve signer-independent accuracy.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">ACCURACY BUILD • 3+ SIGNS • 6+ SAMPLES/SIGN • OFFLINE</div><p class="note">No Python. Training uses a stronger temporal Conv1D model with stratified validation, dropout, batch normalization and early stopping. More varied samples usually improve signer-independent accuracy.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -113,7 +113,7 @@ const $=id=>document.getElementById(id), sleep=ms=>new Promise(r=>setTimeout(r,m
 let handLandmarker,stream,ctx,drawing,trainCtx,trainDrawing,model=null,labels=[],dataset=JSON.parse(localStorage.getItem("svx-data")||"[]");
 let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[], inferenceBusy=false, inferenceErrors=0, autoSpeakLastLabel="", autoSpeakArmed=true;
 let selectedRecordIndexes=new Set();
-const SEQ=24, FEAT=126, MIN_SIGNS=3, MIN_TRAIN_PER_SIGN=8, MIN_TRAIN_PARTICIPANTS=2;
+const SEQ=24, FEAT=126, MIN_SIGNS=3, MIN_TRAIN_PER_SIGN=6, MIN_TRAIN_PARTICIPANTS=2;
 
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab,.page").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.page).classList.add("active");updateStats()});
 
