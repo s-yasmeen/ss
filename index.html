@@ -524,7 +524,69 @@ $("trainBtn").onclick=async()=>{
    if(V){V.x.dispose();V.y.dispose()}
  }
 };
-async function loadSaved(){try{model=await tf.loadLayersModel("indexeddb://silentvoice-x");labels=JSON.parse(localStorage.getItem("svx-labels")||"[]");if(labels.length){$("modelStatus").textContent="● Saved AI loaded ("+labels.length+" signs)";$("modelStatus").classList.add("on");$("word").textContent="READY";$("conf").textContent="AI trained — start camera"}}catch(e){}}
+async function loadSaved(){
+ const key="indexeddb://silentvoice-x";
+ $("modelStatus").textContent="● Checking saved AI…";
+ try{
+   await tf.ready();
+   const models=await tf.io.listModels();
+   if(!models[key]){
+     model=null; labels=[];
+     if(dataset.length){
+       const recovered=[...new Set(dataset.map(x=>x.label))].sort();
+       $("modelStatus").textContent="● Training data found — retrain AI";
+       $("modelStatus").classList.remove("on");
+       $("word").textContent="READY";
+       $("conf").textContent="Saved samples found • model needs retraining";
+       $("trainText").textContent=dataset.length+" saved samples across "+recovered.length+" signs found — tap TRAIN SILENTVOICE X once to restore recognition.";
+     }else{
+       $("modelStatus").textContent="● Model not trained";
+       $("modelStatus").classList.remove("on");
+     }
+     return;
+   }
+
+   model=await tf.loadLayersModel(key);
+   let savedLabels=[];
+   try{savedLabels=JSON.parse(localStorage.getItem("svx-labels")||"[]")}catch(_){savedLabels=[]}
+   const lastLayer=model.layers[model.layers.length-1];
+   const outputUnits=Number(lastLayer?.units||0);
+
+   if(!savedLabels.length || (outputUnits && savedLabels.length!==outputUnits)){
+     const recovered=[...new Set(dataset.map(x=>x.label))].sort();
+     if(recovered.length && (!outputUnits || recovered.length===outputUnits)){
+       savedLabels=recovered;
+       localStorage.setItem("svx-labels",JSON.stringify(savedLabels));
+     }
+   }
+
+   if(!savedLabels.length || (outputUnits && savedLabels.length!==outputUnits)){
+     if(model){model.dispose();model=null}
+     labels=[];
+     $("modelStatus").textContent="● Saved AI needs retraining";
+     $("modelStatus").classList.remove("on");
+     $("conf").textContent="Training labels could not be restored";
+     $("trainText").textContent="Your saved samples are still here. Tap TRAIN SILENTVOICE X to rebuild the recognition model.";
+     return;
+   }
+
+   labels=savedLabels;
+   $("modelStatus").textContent="● Saved AI restored ("+labels.length+" signs)";
+   $("modelStatus").classList.add("on");
+   $("word").textContent="READY";
+   $("conf").textContent="AI trained — start camera";
+   $("trainText").textContent="✓ Saved training model restored";
+ }catch(e){
+   console.error("Saved AI restore failed",e);
+   model=null; labels=[];
+   $("modelStatus").textContent=dataset.length?"● Training data found — retrain AI":"● Model not trained";
+   $("modelStatus").classList.remove("on");
+   if(dataset.length){
+     $("conf").textContent="Saved samples found • tap Train AI";
+     $("trainText").textContent=dataset.length+" saved samples are available. Tap TRAIN SILENTVOICE X to rebuild the model.";
+   }
+ }
+}
 logSamples();loadSaved();
 </script>
 </body>
