@@ -69,8 +69,8 @@
         </div>
         <div class="controls"><button id="recordBtn" class="btn hot">● Record 1 sample</button><button id="deleteSelectedBtn" class="btn ghost">Delete selected sign</button></div>
         <p class="note"><b>Important:</b> every participant should record the <b>same sign labels</b>. Example: P001 records HELLO, GOOD, HEART; P002 records HELLO, GOOD, HEART; P003 records HELLO, GOOD, HEART. Use P003 only as the unseen test signer.</p>
-        <div class="controls"><button id="syncDeviceBtn" class="btn primary">📲 Sync to Device</button><button id="receiveSyncBtn" class="btn ghost">📥 Receive Sync</button><button id="exportBundleBtn" class="btn ghost">⬇ Export Backup</button><button id="importBundleBtn" class="btn ghost">⬆ Import Backup</button><input id="importBundleInput" type="file" accept="application/json,.json" hidden></div>
-        <p class="note"><b>Cross-device + offline:</b> Sync to Device shares the latest cumulative training bundle, including the trained model when available. On the other phone, tablet, or laptop choose Receive Sync and import it. Existing samples are merged, not replaced. Nearby sharing can work without internet when supported by your device.</p>
+        <div class="statusRow"><span id="cloudSyncStatus" class="pill">☁ Shared AI • checking…</span></div>
+        <p class="note"><b>Automatic cross-device sync:</b> training and recorded signs are saved locally first, then synchronized over the internet. Open this same SilentVoiceX link on another device and it automatically loads the newest shared training. Offline changes wait locally and sync after reconnection.</p>
         <div id="personSummary" class="personSummary"></div><div class="recordSelectBar"><button id="selectAllRecordsBtn" class="btn ghost">☑ Select All</button><button id="clearRecordSelectionBtn" class="btn ghost">Clear Selection</button><button id="deleteRecordsBtn" class="btn ghost" disabled>Delete Selected Records</button><span id="recordSelectionStatus" class="selectionStatus">0 selected</span></div><div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
@@ -104,6 +104,8 @@ let handLandmarker,stream,ctx,drawing,trainCtx,trainDrawing,model=null,labels=[]
 let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[], inferenceBusy=false, inferenceErrors=0, autoSpeakLastLabel="", autoSpeakArmed=true;
 let selectedRecordIndexes=new Set();
 const SEQ=24, FEAT=126, PORTABLE_BUNDLE_VERSION=1;
+const SYNC_API="https://silentvoicex-sync-api-production.up.railway.app/state";
+let cloudVersion=Number(localStorage.getItem("svx-cloud-version")||0), cloudBusy=false, cloudTimer=null;
 
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab,.page").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.page).classList.add("active");updateStats()});
 
@@ -163,14 +165,16 @@ function logSamples(){
 }
 function markDatasetChanged(){
  try{localStorage.setItem("svx-data",JSON.stringify(dataset));}
- catch(e){alert("This browser storage is full. Export a Training Bundle before recording more samples.");throw e}
+ catch(e){alert("This browser storage is full. Delete unneeded recordings before adding more samples.");throw e}
+ localStorage.setItem("svx-cloud-dirty","1");
+ scheduleCloudSync();
  const signCount=new Set(dataset.map(x=>x.label)).size;
  if(model&&labels.length){
-   $("trainText").textContent="Saved "+dataset.length+" cumulative samples across "+signCount+" signs. Previous trained AI is kept until updated training succeeds.";
+   $("trainText").textContent="Saved locally: "+dataset.length+" cumulative samples across "+signCount+" signs. Shared sync is pending.";
    $("modelStatus").textContent="● Previous AI active • update pending";
    $("modelStatus").classList.add("on");
  }else{
-   $("trainText").textContent="Saved "+dataset.length+" cumulative samples across "+signCount+" signs — train AI when ready.";
+   $("trainText").textContent="Saved locally: "+dataset.length+" cumulative samples across "+signCount+" signs — train AI when ready.";
    $("modelStatus").textContent="● Retrain needed";
    $("modelStatus").classList.remove("on");
  }
@@ -458,80 +462,79 @@ async function capturePortableModel(){
  if(!captured)return null;
  return {modelTopology:captured.modelTopology,weightSpecs:captured.weightSpecs||[],weightDataBase64:bufferToBase64(captured.weightData),format:captured.format||null,generatedBy:captured.generatedBy||null,convertedBy:captured.convertedBy||null,trainingConfig:captured.trainingConfig||null,userDefinedMetadata:captured.userDefinedMetadata||null};
 }
-async function createTrainingBundleFile(){
- const portableModel=await capturePortableModel().catch(e=>{console.warn("Model export skipped",e);return null});
+function setCloudStatus(text,on=false){
+ const el=$("cloudSyncStatus");if(!el)return;el.textContent=text;el.classList.toggle("on",!!on);
+}
+function scheduleCloudSync(delay=1200){
+ clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>syncCloud().catch(e=>console.warn("Cloud sync",e)),delay);
+}
+function mergeSamples(a,b){
+ const out=[],seen=new Set();
+ for(const raw of [...(a||[]),...(b||[])]){
+   if(!sampleIsValid(raw))continue;
+   const x={...raw,label:String(raw.label||"").trim().toUpperCase(),participant:String(raw.participant||"P001")};
+   const k=x.id?"id:"+x.id:"fp:"+sampleFingerprint(x);
+   if(!seen.has(k)){seen.add(k);out.push(x);}
+ }
+ return out;
+}
+async function fetchCloudState(){
+ const r=await fetch(SYNC_API,{method:"GET",cache:"no-store"});
+ if(!r.ok)throw new Error("sync read "+r.status);
+ return await r.json();
+}
+async function pushCloudState(baseVersion=cloudVersion){
+ if(!navigator.onLine)return false;
+ const portableModel=await capturePortableModel().catch(e=>{console.warn("Shared model capture skipped",e);return null});
  let history=[];try{history=JSON.parse(localStorage.getItem("svx-training-history")||"[]")}catch(_){history=[]}
- const bundle={kind:"SilentVoiceXTrainingBundle",version:PORTABLE_BUNDLE_VERSION,exportedAt:new Date().toISOString(),seq:SEQ,feat:FEAT,dataset,trainedLabels:labels,threshold:parseFloat($("threshold").value)||.75,history,model:portableModel};
- const name="SilentVoiceX-sync-"+new Date().toISOString().replace(/[:.]/g,"-")+".json";
- return {bundle,file:new File([JSON.stringify(bundle)],name,{type:"application/json"}),portableModel};
-}
-async function exportTrainingBundle(){
- try{
-   $("exportBundleBtn").disabled=true;
-   const {file,portableModel}=await createTrainingBundleFile();
-   const url=URL.createObjectURL(file),a=document.createElement("a");
-   a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
-   $("trainText").textContent="✓ Backup exported: "+dataset.length+" samples, "+new Set(dataset.map(x=>x.label)).size+" signs"+(portableModel?" + trained model":"")+".";
- }catch(e){alert("Could not export training backup: "+e.message)}finally{$("exportBundleBtn").disabled=false;}
-}
-async function syncToDevice(){
- try{
-   $("syncDeviceBtn").disabled=true;
-   const {file,portableModel}=await createTrainingBundleFile();
-   if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
-     await navigator.share({title:"SilentVoiceX Device Sync",text:"Import this SilentVoiceX sync file on the other device using Receive Sync.",files:[file]});
-     $("trainText").textContent="✓ Device sync package shared: "+dataset.length+" samples across "+new Set(dataset.map(x=>x.label)).size+" signs"+(portableModel?" + trained model":"")+".";
-   }else{
-     const url=URL.createObjectURL(file),a=document.createElement("a");a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
-     $("trainText").textContent="Share sheet unavailable, so the sync package was saved as a file. Send it to the other device and choose Receive Sync.";
-   }
- }catch(e){if(e?.name!=="AbortError")alert("Could not create device sync: "+e.message)}finally{$("syncDeviceBtn").disabled=false;}
-}
-async function restorePortableModel(bundle){
- if(!bundle.model||!Array.isArray(bundle.trainedLabels)||!bundle.trainedLabels.length)return false;
- const m=bundle.model;
- const artifacts={modelTopology:m.modelTopology,weightSpecs:m.weightSpecs||[],weightData:base64ToBuffer(m.weightDataBase64||"")};
- if(m.format)artifacts.format=m.format;if(m.generatedBy)artifacts.generatedBy=m.generatedBy;if(m.convertedBy)artifacts.convertedBy=m.convertedBy;if(m.trainingConfig)artifacts.trainingConfig=m.trainingConfig;if(m.userDefinedMetadata)artifacts.userDefinedMetadata=m.userDefinedMetadata;
- const imported=await tf.loadLayersModel(tf.io.fromMemory(artifacts));
- const units=Number(imported.layers[imported.layers.length-1]?.units||0);
- if(units&&units!==bundle.trainedLabels.length){imported.dispose();throw new Error("Portable model label count does not match its output layer.")}
- await imported.save("indexeddb://silentvoice-x");
- if(model)model.dispose();
- model=imported;labels=bundle.trainedLabels.map(x=>String(x).toUpperCase());
- localStorage.setItem("svx-labels",JSON.stringify(labels));
- $("modelStatus").textContent="● Portable AI restored ("+labels.length+" signs)";$("modelStatus").classList.add("on");
- $("word").textContent="READY";$("conf").textContent="Portable AI restored — start camera";
+ const body={baseVersion,dataset:dataset.filter(sampleIsValid),trainedLabels:labels,threshold:parseFloat($("threshold").value)||.75,history,model:portableModel};
+ const r=await fetch(SYNC_API,{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+ if(r.status===409){
+   const conflict=await r.json();
+   const current=conflict.current||{};
+   dataset=mergeSamples(current.dataset,dataset);
+   localStorage.setItem("svx-data",JSON.stringify(dataset));
+   selectedRecordIndexes.clear();logSamples();
+   cloudVersion=Number(current.version||0);localStorage.setItem("svx-cloud-version",String(cloudVersion));
+   return await pushCloudState(cloudVersion);
+ }
+ if(!r.ok)throw new Error("sync write "+r.status);
+ const saved=await r.json();
+ cloudVersion=Number(saved.version||0);localStorage.setItem("svx-cloud-version",String(cloudVersion));
+ localStorage.removeItem("svx-cloud-dirty");
+ setCloudStatus("☁ Shared AI • synced",true);
  return true;
 }
-async function importTrainingBundle(file){
- if(!file)return;
- try{
-   const bundle=JSON.parse(await file.text());
-   if(bundle.kind!=="SilentVoiceXTrainingBundle")throw new Error("This is not a SilentVoiceX training bundle.");
-   if(Number(bundle.seq)!==SEQ||Number(bundle.feat)!==FEAT)throw new Error("This bundle uses an incompatible landmark format.");
-   const incoming=(Array.isArray(bundle.dataset)?bundle.dataset:[]).filter(sampleIsValid).map(s=>({...s,label:String(s.label).trim().toUpperCase(),participant:String(s.participant||"P001")}));
-   if(!incoming.length)throw new Error("No valid training samples were found in the bundle.");
-   const existing=new Set(dataset.filter(sampleIsValid).map(sampleFingerprint));
-   let added=0;
-   for(const s of incoming){const k=sampleFingerprint(s);if(!existing.has(k)){dataset.push(s);existing.add(k);added++;}}
-   localStorage.setItem("svx-data",JSON.stringify(dataset));
-   if(Array.isArray(bundle.history))localStorage.setItem("svx-training-history",JSON.stringify(bundle.history.slice(0,20)));
-   if(Number.isFinite(Number(bundle.threshold)))$("threshold").value=String(bundle.threshold);
-   selectedRecordIndexes.clear();logSamples();
-   const localSet=new Set(dataset.filter(sampleIsValid).map(sampleFingerprint));
-   const bundleSet=new Set(incoming.map(sampleFingerprint));
-   const exactSame=localSet.size===bundleSet.size&&[...localSet].every(x=>bundleSet.has(x));
-   let restored=false;
-   if(exactSame&&bundle.model){try{restored=await restorePortableModel(bundle)}catch(e){console.warn("Portable model restore failed",e)}}
-   if(!restored)markDatasetChanged();
-   alert("Imported "+added+" new training sample"+(added===1?"":"s")+". Total: "+dataset.length+" samples across "+new Set(dataset.map(x=>x.label)).size+" signs."+(restored?" The trained model was restored too.":" Your previous AI is kept; tap TRAIN SILENTVOICE X to rebuild using the combined old + new data."));
- }catch(e){alert("Could not import training bundle: "+e.message)}finally{$("importBundleInput").value="";}
+async function applyCloudState(remote){
+ const dirty=localStorage.getItem("svx-cloud-dirty")==="1";
+ const remoteVersion=Number(remote.version||0);
+ if(remoteVersion<=cloudVersion&&!dirty)return;
+ const merged=dirty?mergeSamples(remote.dataset,dataset):mergeSamples(remote.dataset,[]);
+ dataset=merged;localStorage.setItem("svx-data",JSON.stringify(dataset));selectedRecordIndexes.clear();logSamples();
+ if(Number.isFinite(Number(remote.threshold)))$("threshold").value=String(remote.threshold);
+ if(Array.isArray(remote.history))localStorage.setItem("svx-training-history",JSON.stringify(remote.history.slice(0,20)));
+ cloudVersion=remoteVersion;localStorage.setItem("svx-cloud-version",String(cloudVersion));
+ if(!dirty&&remote.model&&Array.isArray(remote.trainedLabels)&&remote.trainedLabels.length){
+   try{await restorePortableModel({model:remote.model,trainedLabels:remote.trainedLabels});$("modelStatus").textContent="● Shared AI loaded ("+labels.length+" signs)";}catch(e){console.warn("Shared model restore failed",e)}
+ }
+ if(dirty)await pushCloudState(cloudVersion);
+ else setCloudStatus("☁ Shared AI • up to date",true);
 }
-$("syncDeviceBtn").onclick=syncToDevice;
-$("receiveSyncBtn").onclick=()=>$("importBundleInput").click();
-$("exportBundleBtn").onclick=exportTrainingBundle;
-$("importBundleBtn").onclick=()=>$("importBundleInput").click();
-$("importBundleInput").onchange=e=>importTrainingBundle(e.target.files?.[0]);
+async function syncCloud(){
+ if(cloudBusy)return;
+ if(!navigator.onLine){setCloudStatus("☁ Shared AI • offline, changes saved locally",false);return}
+ cloudBusy=true;setCloudStatus("☁ Shared AI • syncing…",false);
+ try{
+   const remote=await fetchCloudState();
+   if(Number(remote.version||0)===0&&dataset.length){await pushCloudState(0);}
+   else await applyCloudState(remote);
+ }catch(e){console.warn(e);setCloudStatus("☁ Shared AI • will retry",false);}
+ finally{cloudBusy=false;}
+}
+window.addEventListener("online",()=>syncCloud());
+window.addEventListener("offline",()=>setCloudStatus("☁ Shared AI • offline, changes saved locally",false));
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncCloud()});
+setInterval(()=>{if(!document.hidden&&navigator.onLine)syncCloud()},15000);
 
 function buildModel(n){
  const m=tf.sequential();
@@ -613,6 +616,8 @@ $("trainBtn").onclick=async()=>{
    $("resultsLog").textContent="Classes: "+labels.join(", ")+"\nCumulative samples: "+validData.length+"\nTrain samples: "+tr.length+"\nValidation samples: "+va.length+"\nHeld-out signer: "+(hold||"not used")+" ("+test.length+" samples)"+coverage+"\nFinal validation accuracy: "+(val==null?"not measured":(val*100).toFixed(1)+"%")+"\nUnseen-signer accuracy: "+(held==null?"not measured":(held*100).toFixed(1)+"%");
    $("modelStatus").textContent="● AI trained • "+labels.length+" signs";$("modelStatus").classList.add("on");$("word").textContent="READY";$("conf").textContent="Updated AI trained — old + new signs saved";
    $("trainText").textContent="✓ Updated training complete • previous samples preserved • "+labels.length+" signs";
+   localStorage.setItem("svx-cloud-dirty","1");
+   await syncCloud();
  }catch(e){
    console.error(e);if(candidate){try{candidate.dispose()}catch(_){}}
    $("trainText").textContent="Update failed — previous trained AI was kept. "+e.message;
@@ -624,7 +629,8 @@ $("trainBtn").onclick=async()=>{
  }
 };
 async function loadSaved(){try{model=await tf.loadLayersModel("indexeddb://silentvoice-x");labels=JSON.parse(localStorage.getItem("svx-labels")||"[]");if(labels.length){$("modelStatus").textContent="● Saved AI loaded ("+labels.length+" signs)";$("modelStatus").classList.add("on");$("word").textContent="READY";$("conf").textContent="AI trained — start camera"}}catch(e){}}
-logSamples();loadSaved();
+logSamples();
+loadSaved().finally(()=>syncCloud());
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(e=>console.warn("Offline worker unavailable",e)));}
 </script>
 </body>
