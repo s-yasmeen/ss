@@ -1,0 +1,39 @@
+name: Fix mobile training v3
+on:
+  push:
+    paths:
+      - '.github/workflows/run-fix-mobile-training-v3.yml'
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply v3 repair
+        run: python scripts/fix-mobile-training-v3.py
+      - name: Validate JavaScript syntax and invariants
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          js=s.split('<script type="module">',1)[1].split('</script>',1)[0]
+          js=js.replace('import {HandLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";','const HandLandmarker={}, FilesetResolver={}, DrawingUtils=function(){};')
+          Path('/tmp/app.mjs').write_text(js)
+          PY
+          node --check /tmp/app.mjs
+          node --check sync-backend/server.js
+          grep -q 'BUILD 15 • AUTO SPEAK 70%' index.html
+          grep -q 'conf>=0.70' index.html
+          grep -q 'value=".70"' index.html
+          grep -q 'tf.getBackend()!=="cpu"' index.html
+          grep -q 'if(!trainingBusy && model && r.landmarks?.length)' index.html
+          grep -q 'const EPOCHS=15;' index.html
+          grep -q 'silentvoicex-build15-cloud-sync-autospeak70-v7' sw.js
+      - name: Commit repaired build
+        run: |
+          git config user.name 'SilentVoiceX Builder'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html sw.js
+          git commit -m 'Stabilize mobile Build 15 training and make 70 percent threshold effective'
+          git push
