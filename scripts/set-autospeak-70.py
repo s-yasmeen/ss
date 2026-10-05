@@ -24,3 +24,4 @@ assert 'conf>=0.70' in s
 assert 'conf<0.60' in s
 
 p.write_text(s)
+# Triggered after workflow installation.
