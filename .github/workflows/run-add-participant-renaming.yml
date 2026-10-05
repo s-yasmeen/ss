@@ -1,0 +1,38 @@
+name: Add participant renaming
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/add-participant-renaming.py'
+      - '.github/workflows/run-add-participant-renaming.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Apply participant renaming patch
+        run: python scripts/add-participant-renaming.py
+      - name: Validate participant editing UI
+        run: |
+          grep -q 'id="renameParticipantBtn"' index.html
+          grep -q 'function editOneSampleParticipant(index)' index.html
+          grep -q 'Participant renamed:' index.html
+          grep -q 'participant-edit-v8' sw.js
+      - name: Commit participant renaming feature
+        run: |
+          git config user.name 'SilentVoiceX Builder'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html sw.js
+          if git diff --cached --quiet; then
+            echo 'No changes required'
+          else
+            git commit -m 'Allow participant IDs to be changed after recording'
+            git push origin main
+          fi
