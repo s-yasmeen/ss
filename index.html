@@ -66,8 +66,10 @@
           <div class="field"><label>Sign label</label><input id="label" value="HELLO" maxlength="24"></div>
           <div class="field"><label>Hold-out participant for final test</label><input id="holdout" value="P003"></div>
           <div class="field"><label>Unknown threshold</label><input id="threshold" type="number" min=".5" max=".99" step=".01" value=".70"></div>
+          <div class="field"><label>New participant ID for recorded data</label><input id="renameParticipantTo" placeholder="e.g. P004" maxlength="32"></div>
         </div>
-        <div class="controls"><button id="recordBtn" class="btn hot">● Record 1 sample</button><button id="deleteSelectedBtn" class="btn ghost">Delete selected sign</button></div>
+        <div class="controls"><button id="recordBtn" class="btn hot">● Record 1 sample</button><button id="deleteSelectedBtn" class="btn ghost">Delete selected sign</button><button id="renameParticipantBtn" class="btn ghost">✎ Rename recorded participant</button></div>
+        <p class="note"><b>Correct a participant ID after recording:</b> enter the existing ID in <b>Participant ID</b>, enter the replacement above, then choose <b>Rename recorded participant</b>. All recorded samples for that participant are updated without changing the hand-sign data.</p>
         <p class="note"><b>Important:</b> every participant should record the <b>same sign labels</b>. Example: P001 records HELLO, GOOD, HEART; P002 records HELLO, GOOD, HEART; P003 records HELLO, GOOD, HEART. Use P003 only as the unseen test signer.</p>
         <div class="statusRow"><span id="cloudSyncStatus" class="pill">☁ Shared AI • checking…</span></div>
         <p class="note"><b>Automatic cross-device sync:</b> training and recorded signs are saved locally first, then synchronized over the internet. Open this same SilentVoiceX link on another device and it automatically loads the newest shared training. Offline changes wait locally and sync after reconnection.</p>
@@ -168,11 +170,15 @@ function logSamples(){
    const info=document.createElement("div");
    info.className="sampleInfo";
    info.innerHTML='<span class="sampleTag">'+s.participant+'</span><span class="sampleTag">'+s.label+'</span><span>Sample '+running[k]+' of '+perGroup[k]+'</span>';
+   const edit=document.createElement("button");
+   edit.className="sampleDelete";
+   edit.textContent="Edit participant";
+   edit.onclick=()=>editOneSampleParticipant(index);
    const del=document.createElement("button");
    del.className="sampleDelete";
    del.textContent="Delete";
    del.onclick=()=>deleteOneSample(index);
-   row.appendChild(check); row.appendChild(info); row.appendChild(del); box.appendChild(row);
+   row.appendChild(check); row.appendChild(info); row.appendChild(edit); row.appendChild(del); box.appendChild(row);
  });
  updateStats();
 }
@@ -191,6 +197,19 @@ function markDatasetChanged(){
    $("modelStatus").textContent="● Retrain needed";
    $("modelStatus").classList.remove("on");
  }
+}
+function cleanParticipantId(value){
+ return String(value||"").replace(/[<>\r\n]/g,"").trim().slice(0,32);
+}
+function editOneSampleParticipant(index){
+ const s=dataset[index];
+ if(!s)return;
+ const next=cleanParticipantId(prompt("Change participant ID for this recorded sample:",s.participant||"P001"));
+ if(!next||next===s.participant)return;
+ s.participant=next;
+ selectedRecordIndexes.clear();
+ markDatasetChanged();
+ logSamples();
 }
 function deleteOneSample(index){
  const s=dataset[index];
@@ -440,6 +459,24 @@ $("recordBtn").onclick=async()=>{
 $("selectAllRecordsBtn").onclick=()=>{selectedRecordIndexes=new Set(dataset.map((_,i)=>i));logSamples();};
 $("clearRecordSelectionBtn").onclick=()=>{selectedRecordIndexes.clear();logSamples();};
 $("deleteRecordsBtn").onclick=()=>{const ids=[...selectedRecordIndexes];if(!ids.length)return;if(!confirm("Delete "+ids.length+" selected record"+(ids.length===1?"":"s")+"?"))return;const chosen=new Set(ids);dataset=dataset.filter((_,i)=>!chosen.has(i));selectedRecordIndexes.clear();markDatasetChanged();logSamples();};
+$("renameParticipantBtn").onclick=()=>{
+ const from=cleanParticipantId($("participant").value);
+ const to=cleanParticipantId($("renameParticipantTo").value);
+ if(!from){alert("Enter the existing participant ID first.");return;}
+ if(!to){alert("Enter the new participant ID.");return;}
+ if(from===to){alert("The new participant ID is the same as the existing ID.");return;}
+ const matches=dataset.filter(s=>s.participant===from).length;
+ if(!matches){alert("No recorded samples found for participant "+from+".");return;}
+ if(!confirm("Rename participant "+from+" to "+to+" for "+matches+" recorded sample"+(matches===1?"":"s")+"?"))return;
+ dataset.forEach(s=>{if(s.participant===from)s.participant=to;});
+ if(cleanParticipantId($("holdout").value)===from)$("holdout").value=to;
+ $("participant").value=to;
+ $("renameParticipantTo").value="";
+ selectedRecordIndexes.clear();
+ markDatasetChanged();
+ logSamples();
+ alert("Participant renamed: "+from+" → "+to+". The recorded hand-sign sequences were preserved.");
+};
 $("deleteSelectedBtn").onclick=()=>{
  const participant=$("participant").value.trim();
  const label=$("label").value.trim().toUpperCase();
@@ -541,12 +578,13 @@ function scheduleCloudSync(delay=1200){
  clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>syncCloud().catch(e=>console.warn("Cloud sync",e)),delay);
 }
 function mergeSamples(a,b){
- const out=[],seen=new Set();
+ const out=[],positions=new Map();
  for(const raw of [...(a||[]),...(b||[])]){
    if(!sampleIsValid(raw))continue;
-   const x={...raw,label:String(raw.label||"").trim().toUpperCase(),participant:String(raw.participant||"P001")};
+   const x={...raw,label:String(raw.label||"").trim().toUpperCase(),participant:cleanParticipantId(raw.participant||"P001")||"P001"};
    const k=x.id?"id:"+x.id:"fp:"+sampleFingerprint(x);
-   if(!seen.has(k)){seen.add(k);out.push(x);}
+   if(positions.has(k)) out[positions.get(k)]=x;
+   else {positions.set(k,out.length);out.push(x);}
  }
  return out;
 }
