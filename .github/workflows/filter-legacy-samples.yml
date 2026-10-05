@@ -1,0 +1,44 @@
+name: Filter legacy training samples
+
+on:
+  push:
+    paths:
+      - 'scripts/filter_legacy_samples.py'
+      - '.github/workflows/filter-legacy-samples.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply compatibility filter
+        run: python scripts/filter_legacy_samples.py
+      - name: Validate browser module
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text()
+          assert 'function isCompatibleSample' in s
+          assert '4+ SAMPLES/SIGN' in s
+          assert 'signVocabulary' not in s
+          assert 'quickSignPanel' not in s
+          assert 'tf.callbacks.earlyStopping' not in s
+          m=re.search(r'<script type="module">(.*?)</script>',s,re.S)
+          assert m
+          Path('/tmp/svx-module.mjs').write_text(m.group(1))
+          PY
+          node --check /tmp/svx-module.mjs
+          grep -q "silentvoicex-compatible-training-v8" sw.js
+      - name: Commit compatibility build
+        run: |
+          git config user.name "SilentVoiceX Builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html sw.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Ignore incompatible legacy samples during training"
+          git push
