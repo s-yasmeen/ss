@@ -1,4 +1,4 @@
-const CACHE='silentvoicex-build15-safe-v2';
+const CACHE='silentvoicex-build15-portable-v3';
 const ASSETS=['./','./index.html','./offline.html','https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js','https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm','https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'];
 async function save(c,u){try{const r=await fetch(u,{cache:'reload'});if(r&&(r.ok||r.type==='opaque'))await c.put(u,r.clone())}catch(_){}}
 self.addEventListener('install',e=>e.waitUntil((async()=>{const c=await caches.open(CACHE);for(const u of ASSETS)await save(c,u);await self.skipWaiting()})()));
