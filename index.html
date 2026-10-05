@@ -65,7 +65,7 @@
           <div class="field"><label>Participant ID</label><input id="participant" value="P001"></div>
           <div class="field"><label>Sign label</label><input id="label" value="HELLO" maxlength="24"></div>
           <div class="field"><label>Hold-out participant for final test</label><input id="holdout" value="P003"></div>
-          <div class="field"><label>Unknown threshold</label><input id="threshold" type="number" min=".5" max=".99" step=".01" value=".75"></div>
+          <div class="field"><label>Unknown threshold</label><input id="threshold" type="number" min=".5" max=".99" step=".01" value=".70"></div>
         </div>
         <div class="controls"><button id="recordBtn" class="btn hot">● Record 1 sample</button><button id="deleteSelectedBtn" class="btn ghost">Delete selected sign</button></div>
         <p class="note"><b>Important:</b> every participant should record the <b>same sign labels</b>. Example: P001 records HELLO, GOOD, HEART; P002 records HELLO, GOOD, HEART; P003 records HELLO, GOOD, HEART. Use P003 only as the unseen test signer.</p>
@@ -265,7 +265,7 @@ async function loop(){
      $("recordOverlay").textContent="Recording paused — show your hand clearly";
    }
  }
- if(model && r.landmarks?.length){
+ if(!trainingBusy && model && r.landmarks?.length){
    liveBuffer.push(f);
    if(liveBuffer.length>SEQ) liveBuffer.shift();
    if(liveBuffer.length<SEQ){
@@ -487,7 +487,7 @@ async function pushCloudState(baseVersion=cloudVersion,retry=0){
  if(!navigator.onLine||trainingBusy)return false;
  const includeModel=localStorage.getItem("svx-cloud-model-dirty")==="1";
  let history=[];try{history=JSON.parse(localStorage.getItem("svx-training-history")||"[]")}catch(_){history=[]}
- const body={baseVersion,dataset:dataset.filter(sampleIsValid),threshold:parseFloat($("threshold").value)||.75};
+ const body={baseVersion,dataset:dataset.filter(sampleIsValid),threshold:Math.min(parseFloat($("threshold").value)||.70,0.70)};
  if(includeModel){
    body.model=await capturePortableModel().catch(e=>{console.warn("Shared model capture skipped",e);return null});
    body.trainedLabels=labels;
@@ -519,7 +519,7 @@ async function applyCloudState(remote){
  if(remoteVersion<=cloudVersion&&!dirty)return;
  const merged=dirty?mergeSamples(remote.dataset,dataset):mergeSamples(remote.dataset,[]);
  dataset=merged;localStorage.setItem("svx-data",JSON.stringify(dataset));selectedRecordIndexes.clear();logSamples();
- if(Number.isFinite(Number(remote.threshold)))$("threshold").value=String(remote.threshold);
+ if(Number.isFinite(Number(remote.threshold)))$("threshold").value=String(Math.min(Number(remote.threshold),0.70));
  if(Array.isArray(remote.history))localStorage.setItem("svx-training-history",JSON.stringify(remote.history.slice(0,20)));
  cloudVersion=remoteVersion;localStorage.setItem("svx-cloud-version",String(cloudVersion));
  if(!dirty&&remote.model&&Array.isArray(remote.trainedLabels)&&remote.trainedLabels.length){
@@ -599,17 +599,18 @@ $("trainBtn").onclick=async()=>{
    const missingTest=nextLabels.filter(l=>!testLabels.has(l));
 
    trainingBusy=true;
+   $("trainBtn").disabled=true;
    setCloudStatus("☁ Shared AI • training locally…",false);
    $("trainText").textContent="Building updated AI from "+trainAll.length+" ready cumulative training samples"+(pendingLabels.length?" • pending: "+pendingLabels.join(", "):"")+"…";
    $("bar").style.width="1%";
    await tf.ready();
-   try{if(!tf.getBackend()){await tf.setBackend("cpu");await tf.ready();}}catch(e){console.warn("Backend setup fallback",e)}
+   try{if(tf.getBackend()!=="cpu"){await tf.setBackend("cpu");await tf.ready();}}catch(e){console.warn("CPU backend switch skipped",e)}
    const shuffled=trainAll.slice();tf.util.shuffle(shuffled);
    const tr=[],va=[];
    for(const l of nextLabels){const items=shuffled.filter(x=>x.label===l);const nVal=Math.max(1,Math.floor(items.length*.2));va.push(...items.slice(0,nVal));tr.push(...items.slice(nVal));}
    candidate=buildModel(nextLabels.length);
    T=tensors(tr,nextLabels);V=tensors(va,nextLabels);
-   $("trainBtn").disabled=true;$("bar").style.width="1%";$("resultsLog").textContent="Training updated cumulative model…";await tf.nextFrame();
+   $("bar").style.width="1%";$("resultsLog").textContent="Training updated cumulative model…";await tf.nextFrame();
    const EPOCHS=15;
    await candidate.fit(T.x,T.y,{epochs:EPOCHS,batchSize:Math.min(6,tr.length),validationData:[V.x,V.y],shuffle:true,callbacks:{onTrainBegin:async()=>{$("trainText").textContent="Training updated AI…";await tf.nextFrame()},onEpochEnd:async(e,l)=>{const acc=(l.acc??l.accuracy??0)*100,vacc=(l.val_acc??l.val_accuracy??0)*100;$("bar").style.width=((e+1)/EPOCHS*100)+"%";$("trainText").textContent="Epoch "+(e+1)+"/"+EPOCHS+" • accuracy "+acc.toFixed(1)+"% • validation "+vacc.toFixed(1)+"%";await tf.nextFrame()}}});
 
