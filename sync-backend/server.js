@@ -108,14 +108,15 @@ const server = http.createServer(async (req, res) => {
         return send(res, 409, { error: 'version_conflict', current }, origin);
       }
 
+      const has = key => Object.prototype.hasOwnProperty.call(incoming, key);
       const next = {
         version: Number(current.version || 0) + 1,
         updatedAt: new Date().toISOString(),
-        dataset: Array.isArray(incoming.dataset) ? incoming.dataset : [],
-        trainedLabels: Array.isArray(incoming.trainedLabels) ? incoming.trainedLabels : [],
-        threshold: Number(incoming.threshold) || 0.75,
-        history: Array.isArray(incoming.history) ? incoming.history.slice(0, 20) : [],
-        model: incoming.model || null
+        dataset: Array.isArray(incoming.dataset) ? incoming.dataset : (current.dataset || []),
+        trainedLabels: has('trainedLabels') && Array.isArray(incoming.trainedLabels) ? incoming.trainedLabels : (current.trainedLabels || []),
+        threshold: has('threshold') && Number.isFinite(Number(incoming.threshold)) ? Number(incoming.threshold) : (Number(current.threshold) || 0.75),
+        history: has('history') && Array.isArray(incoming.history) ? incoming.history.slice(0, 20) : (current.history || []),
+        model: has('model') ? incoming.model : (current.model || null)
       };
 
       await writeState(next);

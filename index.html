@@ -105,7 +105,7 @@ let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], re
 let selectedRecordIndexes=new Set();
 const SEQ=24, FEAT=126, PORTABLE_BUNDLE_VERSION=1;
 const SYNC_API="https://silentvoicex-sync-api-production.up.railway.app/state";
-let cloudVersion=Number(localStorage.getItem("svx-cloud-version")||0), cloudBusy=false, cloudTimer=null;
+let cloudVersion=Number(localStorage.getItem("svx-cloud-version")||0), cloudBusy=false, cloudTimer=null, trainingBusy=false;
 
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab,.page").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.page).classList.add("active");updateStats()});
 
@@ -483,25 +483,33 @@ async function fetchCloudState(){
  if(!r.ok)throw new Error("sync read "+r.status);
  return await r.json();
 }
-async function pushCloudState(baseVersion=cloudVersion){
- if(!navigator.onLine)return false;
- const portableModel=await capturePortableModel().catch(e=>{console.warn("Shared model capture skipped",e);return null});
+async function pushCloudState(baseVersion=cloudVersion,retry=0){
+ if(!navigator.onLine||trainingBusy)return false;
+ const includeModel=localStorage.getItem("svx-cloud-model-dirty")==="1";
  let history=[];try{history=JSON.parse(localStorage.getItem("svx-training-history")||"[]")}catch(_){history=[]}
- const body={baseVersion,dataset:dataset.filter(sampleIsValid),trainedLabels:labels,threshold:parseFloat($("threshold").value)||.75,history,model:portableModel};
+ const body={baseVersion,dataset:dataset.filter(sampleIsValid),threshold:parseFloat($("threshold").value)||.75};
+ if(includeModel){
+   body.model=await capturePortableModel().catch(e=>{console.warn("Shared model capture skipped",e);return null});
+   body.trainedLabels=labels;
+   body.history=history;
+ }
  const r=await fetch(SYNC_API,{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
  if(r.status===409){
+   if(retry>=3)throw new Error("sync conflict — will retry shortly");
    const conflict=await r.json();
    const current=conflict.current||{};
    dataset=mergeSamples(current.dataset,dataset);
    localStorage.setItem("svx-data",JSON.stringify(dataset));
    selectedRecordIndexes.clear();logSamples();
    cloudVersion=Number(current.version||0);localStorage.setItem("svx-cloud-version",String(cloudVersion));
-   return await pushCloudState(cloudVersion);
+   await sleep(150+retry*200);
+   return await pushCloudState(cloudVersion,retry+1);
  }
  if(!r.ok)throw new Error("sync write "+r.status);
  const saved=await r.json();
  cloudVersion=Number(saved.version||0);localStorage.setItem("svx-cloud-version",String(cloudVersion));
  localStorage.removeItem("svx-cloud-dirty");
+ if(includeModel)localStorage.removeItem("svx-cloud-model-dirty");
  setCloudStatus("☁ Shared AI • synced",true);
  return true;
 }
@@ -521,7 +529,7 @@ async function applyCloudState(remote){
  else setCloudStatus("☁ Shared AI • up to date",true);
 }
 async function syncCloud(){
- if(cloudBusy)return;
+ if(cloudBusy||trainingBusy)return;
  if(!navigator.onLine){setCloudStatus("☁ Shared AI • offline, changes saved locally",false);return}
  cloudBusy=true;setCloudStatus("☁ Shared AI • syncing…",false);
  try{
@@ -572,26 +580,30 @@ async function evaluate(items,targetModel=model,targetLabels=labels){
 $("trainBtn").onclick=async()=>{
  let T=null,V=null,candidate=null;
  try{
-   const nextLabels=[...new Set(dataset.filter(sampleIsValid).map(x=>x.label))].sort();
-   if(nextLabels.length<2){alert("Record at least 2 different sign labels first.");return}
-   const counts=Object.fromEntries(nextLabels.map(l=>[l,dataset.filter(x=>sampleIsValid(x)&&x.label===l).length]));
-   if(Math.min(...Object.values(counts))<4){alert("Collect at least 4 samples for every sign before training.");return}
    const hold=$("holdout").value.trim();
    const validData=dataset.filter(sampleIsValid);
-   const trainAll=validData.filter(x=>x.participant!==hold);
-   const test=validData.filter(x=>x.participant===hold);
-   const trainLabels=new Set(trainAll.map(x=>x.label));
+   const allLabels=[...new Set(validData.map(x=>x.label))].sort();
+   const trainPool=validData.filter(x=>x.participant!==hold);
+   const perLabelTrain=Object.fromEntries(allLabels.map(l=>[l,trainPool.filter(x=>x.label===l).length]));
+   const nextLabels=allLabels.filter(l=>(perLabelTrain[l]||0)>=4);
+   const pendingLabels=allLabels.filter(l=>(perLabelTrain[l]||0)<4);
+   if(nextLabels.length<2){
+     const detail=allLabels.length?allLabels.map(l=>l+" "+(perLabelTrain[l]||0)+"/4").join(", "):"no signs recorded";
+     alert("Training needs at least 2 ready signs. Each ready sign needs 4 samples outside the hold-out participant. Current: "+detail);
+     return;
+   }
+   const readySet=new Set(nextLabels);
+   const trainAll=trainPool.filter(x=>readySet.has(x.label));
+   const test=validData.filter(x=>x.participant===hold&&readySet.has(x.label));
    const testLabels=new Set(test.map(x=>x.label));
-   const missingTrain=nextLabels.filter(l=>!trainLabels.has(l));
    const missingTest=nextLabels.filter(l=>!testLabels.has(l));
-   if(missingTrain.length){alert("Training cannot start yet. These signs exist only in the held-out participant: "+missingTrain.join(", ")+". Record them with a training participant too.");return}
-   const perLabelTrain=Object.fromEntries(nextLabels.map(l=>[l,trainAll.filter(x=>x.label===l).length]));
-   if(Math.min(...Object.values(perLabelTrain))<4){alert("Each sign needs at least 4 training samples outside the hold-out participant.");return}
 
-   $("trainText").textContent="Building updated AI from all "+trainAll.length+" cumulative training samples…";
+   trainingBusy=true;
+   setCloudStatus("☁ Shared AI • training locally…",false);
+   $("trainText").textContent="Building updated AI from "+trainAll.length+" ready cumulative training samples"+(pendingLabels.length?" • pending: "+pendingLabels.join(", "):"")+"…";
    $("bar").style.width="1%";
    await tf.ready();
-   try{if(tf.getBackend()!=="cpu"){await tf.setBackend("cpu");await tf.ready();}}catch(e){console.warn("Backend switch skipped",e)}
+   try{if(!tf.getBackend()){await tf.setBackend("cpu");await tf.ready();}}catch(e){console.warn("Backend setup fallback",e)}
    const shuffled=trainAll.slice();tf.util.shuffle(shuffled);
    const tr=[],va=[];
    for(const l of nextLabels){const items=shuffled.filter(x=>x.label===l);const nVal=Math.max(1,Math.floor(items.length*.2));va.push(...items.slice(0,nVal));tr.push(...items.slice(nVal));}
@@ -613,10 +625,12 @@ $("trainBtn").onclick=async()=>{
    $("valAcc").textContent=val==null?"—":(val*100).toFixed(1)+"%";
    $("holdAcc").textContent=held==null?"No data":(held*100).toFixed(1)+"%";
    const coverage=missingTest.length?"\nHold-out coverage is PARTIAL; missing signs: "+missingTest.join(", "):"\nHold-out coverage includes all trained signs.";
-   $("resultsLog").textContent="Classes: "+labels.join(", ")+"\nCumulative samples: "+validData.length+"\nTrain samples: "+tr.length+"\nValidation samples: "+va.length+"\nHeld-out signer: "+(hold||"not used")+" ("+test.length+" samples)"+coverage+"\nFinal validation accuracy: "+(val==null?"not measured":(val*100).toFixed(1)+"%")+"\nUnseen-signer accuracy: "+(held==null?"not measured":(held*100).toFixed(1)+"%");
+   $("resultsLog").textContent="Classes trained: "+labels.join(", ")+(pendingLabels.length?"\nPending signs (need 4 training samples): "+pendingLabels.join(", "):"")+"\nCumulative samples: "+validData.length+"\nTrain samples: "+tr.length+"\nValidation samples: "+va.length+"\nHeld-out signer: "+(hold||"not used")+" ("+test.length+" samples)"+coverage+"\nFinal validation accuracy: "+(val==null?"not measured":(val*100).toFixed(1)+"%")+"\nUnseen-signer accuracy: "+(held==null?"not measured":(held*100).toFixed(1)+"%");
    $("modelStatus").textContent="● AI trained • "+labels.length+" signs";$("modelStatus").classList.add("on");$("word").textContent="READY";$("conf").textContent="Updated AI trained — old + new signs saved";
    $("trainText").textContent="✓ Updated training complete • previous samples preserved • "+labels.length+" signs";
    localStorage.setItem("svx-cloud-dirty","1");
+   localStorage.setItem("svx-cloud-model-dirty","1");
+   trainingBusy=false;
    await syncCloud();
  }catch(e){
    console.error(e);if(candidate){try{candidate.dispose()}catch(_){}}
@@ -625,7 +639,9 @@ $("trainBtn").onclick=async()=>{
    if(model&&labels.length){$("modelStatus").textContent="● Previous AI still active";$("modelStatus").classList.add("on")}
    alert("Updated training stopped: "+e.message+"\nYour previous trained AI has NOT been deleted.");
  }finally{
+   trainingBusy=false;
    $("trainBtn").disabled=false;if(T){T.x.dispose();T.y.dispose()}if(V){V.x.dispose();V.y.dispose()}
+   if(localStorage.getItem("svx-cloud-dirty")==="1")scheduleCloudSync(800);
  }
 };
 async function loadSaved(){try{model=await tf.loadLayersModel("indexeddb://silentvoice-x");labels=JSON.parse(localStorage.getItem("svx-labels")||"[]");if(labels.length){$("modelStatus").textContent="● Saved AI loaded ("+labels.length+" signs)";$("modelStatus").classList.add("on");$("word").textContent="READY";$("conf").textContent="AI trained — start camera"}}catch(e){}}
