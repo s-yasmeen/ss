@@ -1,4 +1,4 @@
-const CACHE_NAME = 'silentvoicex-simple-training-v7';
+const CACHE_NAME = 'silentvoicex-compatible-training-v8';
 
 const CORE_ASSETS = [
   './',

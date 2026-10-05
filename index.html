@@ -84,7 +84,7 @@
         <div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">STABLE BUILD • 20 EPOCHS • 6+ SAMPLES/SIGN • OFFLINE</div><p class="note">No Python. Training uses a temporal Conv1D model with stratified validation, dropout and batch normalization. It now runs a fixed 20 epochs so training cannot stop itself early. More varied samples usually improve signer-independent accuracy.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">STABLE TRAINING • 2+ SIGNS • 4+ SAMPLES/SIGN • OFFLINE</div><p class="note">Training uses a compact temporal Conv1D model and a fixed 20-epoch run. Older incompatible recordings are ignored automatically instead of stopping training.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -489,6 +489,10 @@ function buildModel(n){
  m.compile({optimizer:tf.train.adam(.001),loss:"categoricalCrossentropy",metrics:["accuracy"]});
  return m;
 }
+function isCompatibleSample(item){
+ if(!item || !Array.isArray(item.seq) || item.seq.length!==SEQ) return false;
+ return item.seq.every(frame=>Array.isArray(frame) && frame.length===FEAT && frame.every(v=>Number.isFinite(v)));
+}
 function tensors(items,labelList){
  const xs=items.map(x=>x.seq);
  const yRows=items.map(item=>{
@@ -513,13 +517,16 @@ async function evaluate(items){
 $("trainBtn").onclick=async()=>{
  let T=null,V=null;
  try{
-   labels=[...new Set(dataset.map(x=>x.label))].sort();
-   if(labels.length<MIN_SIGNS){alert("Record at least "+MIN_SIGNS+" different sign labels before training. Add more signs first.");return}
-   const counts=Object.fromEntries(labels.map(l=>[l,dataset.filter(x=>x.label===l).length]));
-   if(Math.min(...Object.values(counts))<MIN_TRAIN_PER_SIGN){alert("Collect at least "+MIN_TRAIN_PER_SIGN+" samples for every sign before training.");return}
+   const compatible=dataset.filter(isCompatibleSample);
+   const ignored=dataset.length-compatible.length;
+   labels=[...new Set(compatible.map(x=>x.label))].sort();
+   if(ignored){$("trainText").textContent=ignored+" older incompatible sample"+(ignored===1?"":"s")+" ignored safely.";}
+   if(labels.length<MIN_SIGNS){alert("Record at least "+MIN_SIGNS+" different sign labels with compatible hand recordings before training.");return}
+   const counts=Object.fromEntries(labels.map(l=>[l,compatible.filter(x=>x.label===l).length]));
+   if(Math.min(...Object.values(counts))<MIN_TRAIN_PER_SIGN){alert("Collect at least "+MIN_TRAIN_PER_SIGN+" compatible samples for every sign before training.");return}
    const hold=$("holdout").value.trim();
-   const test=hold?dataset.filter(x=>x.participant===hold):[];
-   const trainAll=hold?dataset.filter(x=>x.participant!==hold):dataset.slice();
+   const test=hold?compatible.filter(x=>x.participant===hold):[];
+   const trainAll=hold?compatible.filter(x=>x.participant!==hold):compatible.slice();
    if(!trainAll.length){alert("No training samples remain. Clear the hold-out field or choose a different hold-out participant.");return}
    const perLabelTrain=Object.fromEntries(labels.map(l=>[l,trainAll.filter(x=>x.label===l).length]));
    const missingTrain=labels.filter(l=>(perLabelTrain[l]||0)<MIN_TRAIN_PER_SIGN);
@@ -572,7 +579,7 @@ $("trainBtn").onclick=async()=>{
    $("holdAcc").textContent=held==null?"No data":(held*100).toFixed(1)+"%";
    $("resultsLog").textContent="Classes: "+labels.join(", ")+"\nTrain samples: "+tr.length+"\nValidation samples: "+va.length+"\nHeld-out signer: "+(hold||"not used")+" ("+test.length+" samples)\nFinal validation accuracy: "+(val==null?"not measured":(val*100).toFixed(1)+"%")+"\nUnseen-signer accuracy: "+(held==null?"not measured":(held*100).toFixed(1)+"%");
    $("modelStatus").textContent="● AI trained";$("modelStatus").classList.add("on");$("word").textContent="READY";$("conf").textContent="AI trained — start camera";
-   $("trainText").textContent="✓ Training complete";
+   $("trainText").textContent="✓ Training complete"+(ignored?" • "+ignored+" old incompatible sample"+(ignored===1?"":"s")+" ignored":"");
    try{await model.save("indexeddb://silentvoice-x-simple-v3");localStorage.setItem("svx-labels",JSON.stringify(labels))}catch(e){}
  }catch(e){
    console.error(e);
