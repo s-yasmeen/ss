@@ -1,0 +1,51 @@
+name: Apply portable cumulative training
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-portable-training.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply tested portable patch source
+        run: |
+          git fetch origin portable-training-work:refs/remotes/origin/portable-training-work
+          git show origin/portable-training-work:.github/workflows/portable-cumulative-training.yml > /tmp/source.yml
+          python - <<'PY'
+          from pathlib import Path
+          lines=Path('/tmp/source.yml').read_text().splitlines()
+          start=next(i for i,l in enumerate(lines) if "python - <<'PY'" in l)
+          end=next(i for i in range(start+1,len(lines)) if lines[i].strip()=='PY')
+          code='\n'.join((l[10:] if l.startswith('          ') else l) for l in lines[start+1:end])+'\n'
+          Path('/tmp/portable_patch.py').write_text(code)
+          PY
+          python /tmp/portable_patch.py
+      - name: Validate browser code
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          js=s.split('<script type="module">',1)[1].split('</script>',1)[0]
+          js=js.replace('import {HandLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";','const HandLandmarker={}, FilesetResolver={}, DrawingUtils=function(){};')
+          Path('/tmp/app.mjs').write_text(js)
+          PY
+          node --check /tmp/app.mjs
+          grep -q 'BUILD 15 • AUTO SPEAK 80%' index.html
+          grep -q 'silentvoicex-build15-portable-v3' sw.js
+          grep -q 'Export Training Bundle' index.html
+          grep -q 'Import Training Bundle' index.html
+          grep -q 'silentvoice-x-previous' index.html
+          grep -q 'const EPOCHS=15;' index.html
+      - name: Commit portable cumulative build
+        run: |
+          git config user.name 'SilentVoiceX Builder'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html sw.js
+          git commit -m 'Add portable cumulative training without losing previous AI'
+          git push
