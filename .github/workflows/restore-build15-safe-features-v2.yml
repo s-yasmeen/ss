@@ -1,0 +1,86 @@
+name: Restore Build 15 safe features v2
+
+on:
+  push:
+    paths:
+      - '.github/workflows/restore-build15-safe-features-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch exact Build 15
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          def rep(old,new,name):
+              global s
+              if old not in s: raise SystemExit('Missing Build 15 marker: '+name)
+              s=s.replace(old,new,1)
+
+          rep('.sampleDelete:hover{background:#4a1b37}', '.sampleDelete:hover{background:#4a1b37}.sampleCheck{width:18px;height:18px;accent-color:#45e6ff;flex:0 0 auto}.recordSelectBar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}.selectionStatus{font-size:12px;color:#9bb0c9;font-weight:800}', 'styles')
+          rep('<div class="top"><div class="brand"><h1>✋ <span>SilentVoice X</span></h1><p>AI that turns signs into speech</p></div></div>', '<div class="top"><div class="brand"><h1>✋ <span>SilentVoice X</span></h1><p>AI that turns signs into speech</p></div><button id="headerOfflineBtn" class="btn primary">📴 Offline Setup</button></div>', 'header offline')
+          rep('<div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="privacyBtn" class="btn ghost" disabled>🔒 Privacy ON</button><button id="clearBtn" class="btn ghost">Clear</button></div>', '<div class="controls"><button id="startBtn" class="btn primary">Start Camera</button><button id="offlineBtn" class="btn ghost">📴 Offline Setup</button><button id="privacyBtn" class="btn ghost" disabled>🔒 Privacy ON</button><button id="clearBtn" class="btn ghost">Clear</button></div>', 'translate offline')
+          rep('<div id="personSummary" class="personSummary"></div><div id="sampleLog" class="log">No samples yet.</div>', '<div id="personSummary" class="personSummary"></div><div class="recordSelectBar"><button id="selectAllRecordsBtn" class="btn ghost">☑ Select All</button><button id="clearRecordSelectionBtn" class="btn ghost">Clear Selection</button><button id="deleteRecordsBtn" class="btn ghost" disabled>Delete Selected Records</button><span id="recordSelectionStatus" class="selectionStatus">0 selected</span></div><div id="sampleLog" class="log">No samples yet.</div>', 'multi delete controls')
+          rep('let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[], inferenceBusy=false, inferenceErrors=0, autoSpeakLastLabel="", autoSpeakArmed=true;\nconst SEQ=24, FEAT=126;', 'let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], recording=false, recordFrames=[], lastPredict=0, handVisible=false, currentUtterance=null, speechVoices=[], inferenceBusy=false, inferenceErrors=0, autoSpeakLastLabel="", autoSpeakArmed=true;\nlet selectedRecordIndexes=new Set();\nconst SEQ=24, FEAT=126;', 'selection state')
+          rep('function logSamples(){\n const box=$("sampleLog");\n const summary=$("personSummary");\n summary.innerHTML="";', 'function updateRecordSelectionUI(){\n const n=selectedRecordIndexes.size;\n $("recordSelectionStatus").textContent=n+" selected";\n $("deleteRecordsBtn").disabled=n===0;\n}\nfunction logSamples(){\n const box=$("sampleLog");\n const summary=$("personSummary");\n selectedRecordIndexes=new Set([...selectedRecordIndexes].filter(i=>i>=0&&i<dataset.length));\n updateRecordSelectionUI();\n summary.innerHTML="";', 'selection ui')
+          rep(' if(!dataset.length){\n   summary.innerHTML=', ' if(!dataset.length){\n   selectedRecordIndexes.clear();\n   updateRecordSelectionUI();\n   summary.innerHTML=', 'empty selection reset')
+          rep('   const row=document.createElement("div");\n   row.className="sampleRow";\n   const info=document.createElement("div");', '   const row=document.createElement("div");\n   row.className="sampleRow";\n   const check=document.createElement("input");\n   check.type="checkbox";check.className="sampleCheck";check.checked=selectedRecordIndexes.has(index);\n   check.setAttribute("aria-label","Select record "+(index+1));\n   check.onchange=()=>{if(check.checked)selectedRecordIndexes.add(index);else selectedRecordIndexes.delete(index);updateRecordSelectionUI();};\n   const info=document.createElement("div");', 'checkbox')
+          rep('   row.appendChild(info); row.appendChild(del); box.appendChild(row);', '   row.appendChild(check); row.appendChild(info); row.appendChild(del); box.appendChild(row);', 'append checkbox')
+          rep('   dataset.splice(index,1);\n   markDatasetChanged();', '   dataset.splice(index,1);\n   selectedRecordIndexes.clear();\n   markDatasetChanged();', 'single delete reset')
+          rep('minHandDetectionConfidence:.55,minHandPresenceConfidence:.55,minTrackingConfidence:.5', 'minHandDetectionConfidence:.5,minHandPresenceConfidence:.5,minTrackingConfidence:.5', '0.50 thresholds')
+          rep('$("trainStartBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));\n$("cameraWrap").classList.add("privacy");', '$("trainStartBtn").onclick=()=>startCamera().catch(e=>alert("Camera could not start: "+e.message));\n$("headerOfflineBtn").onclick=()=>{location.href="./offline.html"};\n$("offlineBtn").onclick=()=>{location.href="./offline.html"};\n$("cameraWrap").classList.add("privacy");', 'offline handlers')
+          rep('$("deleteSelectedBtn").onclick=()=>{', '$("selectAllRecordsBtn").onclick=()=>{selectedRecordIndexes=new Set(dataset.map((_,i)=>i));logSamples();};\n$("clearRecordSelectionBtn").onclick=()=>{selectedRecordIndexes.clear();logSamples();};\n$("deleteRecordsBtn").onclick=()=>{const ids=[...selectedRecordIndexes];if(!ids.length)return;if(!confirm("Delete "+ids.length+" selected record"+(ids.length===1?"":"s")+"?"))return;const chosen=new Set(ids);dataset=dataset.filter((_,i)=>!chosen.has(i));selectedRecordIndexes.clear();markDatasetChanged();logSamples();};\n$("deleteSelectedBtn").onclick=()=>{', 'bulk delete handlers')
+          rep('   dataset=dataset.filter(s=>!(s.participant===participant&&s.label===label));\n   markDatasetChanged();', '   dataset=dataset.filter(s=>!(s.participant===participant&&s.label===label));\n   selectedRecordIndexes.clear();\n   markDatasetChanged();', 'group delete reset')
+
+          # Do not modify Build 15 training architecture/rules.
+          assert 'BUILD 15 • AUTO SPEAK 80%' in s
+          assert 'filters:16,kernelSize:3' in s and 'filters:24,kernelSize:3' in s
+          assert 'const EPOCHS=15;' in s
+          assert 'Collect at least 4 samples for every sign before training.' in s
+          assert 'minHandDetectionConfidence:.5,minHandPresenceConfidence:.5,minTrackingConfidence:.5' in s
+          p.write_text(s)
+          PY
+
+          cat > offline.html <<'EOF'
+          <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SilentVoice X Offline Setup</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#07111f;color:#f7fbff;font-family:system-ui,sans-serif;padding:20px}.card{max-width:600px;background:#0d1b2e;border:1px solid #1c3a5d;border-radius:24px;padding:24px}.btn{border:0;border-radius:14px;padding:12px 16px;font-weight:900;color:white;background:#173554;cursor:pointer}.primary{background:linear-gradient(135deg,#0ea5e9,#7c3aed)}.row{display:flex;gap:10px;flex-wrap:wrap}.status{margin:16px 0;color:#9bb0c9;line-height:1.5}</style></head><body><div class="card"><h1>📴 SilentVoice X Offline Setup</h1><p>Prepare the stable Build 15 app while online. Your samples and trained model remain in this browser.</p><div id="status" class="status">Ready to prepare offline mode.</div><div class="row"><button id="prepare" class="btn primary">Prepare Offline Mode</button><button id="open" class="btn">Open SilentVoice X</button></div><script>const st=document.getElementById('status');document.getElementById('open').onclick=()=>location.href='./index.html';document.getElementById('prepare').onclick=async()=>{try{st.textContent='Preparing offline files…';await navigator.serviceWorker.register('./sw.js');await navigator.serviceWorker.ready;for(const u of ['./','./index.html','./offline.html','https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js','https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm','https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task']){try{await fetch(u,{cache:'reload'})}catch(_){}}localStorage.setItem('svx-offline-prepared','1');st.textContent='✓ Offline mode prepared. Open the app and start the camera once while online, then test offline.'}catch(e){st.textContent='Offline setup error: '+e.message}};</script></div></body></html>
+          EOF
+
+          cat > sw.js <<'EOF'
+          const CACHE='silentvoicex-build15-safe-v2';
+          const ASSETS=['./','./index.html','./offline.html','https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js','https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm','https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'];
+          async function save(c,u){try{const r=await fetch(u,{cache:'reload'});if(r&&(r.ok||r.type==='opaque'))await c.put(u,r.clone())}catch(_){}}
+          self.addEventListener('install',e=>e.waitUntil((async()=>{const c=await caches.open(CACHE);for(const u of ASSETS)await save(c,u);await self.skipWaiting()})()));
+          self.addEventListener('activate',e=>e.waitUntil((async()=>{for(const n of await caches.keys())if(n!==CACHE)await caches.delete(n);await self.clients.claim()})()));
+          self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith((async()=>{const c=await caches.match(e.request);if(c)return c;try{const r=await fetch(e.request);if(r&&(r.ok||r.type==='opaque')){const k=await caches.open(CACHE);await k.put(e.request,r.clone())}return r}catch(err){if(e.request.mode==='navigate')return (await caches.match('./index.html'))||(await caches.match('./offline.html'));throw err}})())});
+          EOF
+      - name: Validate exact stable training
+        run: |
+          grep -q 'BUILD 15 • AUTO SPEAK 80%' index.html
+          grep -q 'const EPOCHS=15;' index.html
+          grep -q 'filters:16,kernelSize:3' index.html
+          grep -q 'filters:24,kernelSize:3' index.html
+          grep -q 'Collect at least 4 samples for every sign before training.' index.html
+          grep -q 'Delete Selected Records' index.html
+          grep -q 'minHandDetectionConfidence:.5,minHandPresenceConfidence:.5,minTrackingConfidence:.5' index.html
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text();js=s.split('<script type="module">',1)[1].split('</script>',1)[0]
+          js=js.replace('import {HandLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";','const HandLandmarker={},FilesetResolver={},DrawingUtils=function(){};')
+          Path('/tmp/app.mjs').write_text(js)
+          PY
+          node --check /tmp/app.mjs
+      - name: Commit stable restored app
+        run: |
+          git config user.name 'SilentVoiceX Builder'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html offline.html sw.js
+          git commit -m 'Restore stable Build 15 with safe requested features'
+          git push
