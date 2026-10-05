@@ -1,0 +1,46 @@
+name: Simplify training fix
+
+on:
+  push:
+    paths:
+      - 'scripts/simplify_training_fix.py'
+      - '.github/workflows/simplify-training-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply simplified training repair
+        run: python scripts/simplify_training_fix.py
+      - name: Validate browser module syntax and training rules
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text()
+          assert 'quickSignPanel' not in s
+          assert 'signVocabulary' not in s
+          assert 'MIN_SIGNS=2' in s
+          assert 'MIN_TRAIN_PER_SIGN=4' in s
+          assert 'MIN_TRAIN_PARTICIPANTS=1' in s
+          assert 'indexeddb://silentvoice-x-simple-v3' in s
+          assert 'tf.callbacks.earlyStopping' not in s
+          m=re.search(r'<script type="module">(.*?)</script>',s,re.S)
+          assert m, 'module script missing'
+          Path('/tmp/svx-module.mjs').write_text(m.group(1))
+          PY
+          node --check /tmp/svx-module.mjs
+          grep -q "silentvoicex-simple-training-v7" sw.js
+      - name: Commit repaired training build
+        run: |
+          git config user.name "SilentVoiceX Builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html sw.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Simplify training requirements and remove word list"
+          git push
