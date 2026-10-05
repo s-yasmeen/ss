@@ -74,7 +74,7 @@
         <div id="personSummary" class="personSummary"></div><div class="recordSelectBar"><button id="selectAllRecordsBtn" class="btn ghost">☑ Select All</button><button id="clearRecordSelectionBtn" class="btn ghost">Clear Selection</button><button id="deleteRecordsBtn" class="btn ghost" disabled>Delete Selected Records</button><span id="recordSelectionStatus" class="selectionStatus">0 selected</span></div><div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
-        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 15 • AUTO SPEAK 80%</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
+        <div class="rocket">🚀</div><h2>Train AI in your browser</h2><div class="smallcap" style="margin-bottom:8px">BUILD 15 • AUTO SPEAK 70%</div><p class="note">No Python. Training runs directly in this browser using a lightweight temporal neural network.</p>
         <button id="trainBtn" class="btn primary">TRAIN SILENTVOICE X</button>
         <div class="progress" style="margin-top:18px"><div id="bar" class="bar"></div></div>
         <p id="trainText" class="note">Waiting for data.</p>
@@ -297,13 +297,13 @@ function setPrediction(name,conf){
  $("detectCard").classList.add("flash");
 
  // Auto-speak only for a confident accepted sign.
- if(name!=="READY" && name!=="UNKNOWN" && conf>=0.80){
+ if(name!=="READY" && name!=="UNKNOWN" && conf>=0.70){
    if(autoSpeakArmed || autoSpeakLastLabel!==name){
      autoSpeakLastLabel=name;
      autoSpeakArmed=false;
      speakText(name);
    }
- }else if(conf<0.70 || name==="UNKNOWN" || name==="READY"){
+ }else if(conf<0.60 || name==="UNKNOWN" || name==="READY"){
    // Re-arm after the user changes/removes the gesture.
    autoSpeakArmed=true;
  }
