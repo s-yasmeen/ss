@@ -1,0 +1,38 @@
+name: Add connected device registry
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/add-device-registry.py'
+      - '.github/workflows/run-add-device-registry.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Apply device registry patch
+        run: python scripts/add-device-registry.py
+      - name: Validate backend syntax and required UI
+        run: |
+          node --check sync-backend/server.js
+          grep -q 'id="activeDeviceCount"' index.html
+          grep -q 'async function deviceHeartbeat()' index.html
+          grep -q "url.pathname === '/devices'" sync-backend/server.js
+      - name: Commit device registry
+        run: |
+          git config user.name 'SilentVoiceX Builder'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html sync-backend/server.js
+          if git diff --cached --quiet; then
+            echo 'No changes required'
+          else
+            git commit -m 'Add connected device registry and live device count'
+            git push origin main
+          fi
