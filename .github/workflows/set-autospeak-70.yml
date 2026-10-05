@@ -25,15 +25,18 @@ jobs:
           js=js.replace('import {HandLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";','const HandLandmarker={}, FilesetResolver={}, DrawingUtils=function(){};')
           Path('/tmp/app.mjs').write_text(js)
           assert 'BUILD 15 • AUTO SPEAK 70%' in s
+          assert '🔊 Auto-speak ≥70%' in s
           assert 'conf>=0.70' in s
           assert 'conf<0.60' in s
           assert 'const EPOCHS=15;' in s
+          assert 'SYNC_API=' in s
+          assert "silentvoicex-build15-cloud-sync-autospeak70-v6" in Path('sw.js').read_text()
           PY
           node --check /tmp/app.mjs
       - name: Commit change
         run: |
           git config user.name 'SilentVoiceX Builder'
           git config user.email 'actions@users.noreply.github.com'
-          git add index.html
-          git commit -m 'Set Build 15 auto-speak threshold to 70 percent'
+          git add index.html sw.js
+          git commit -m 'Complete Auto Speak 70 percent update'
           git push
