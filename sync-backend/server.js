@@ -5,6 +5,7 @@ import path from 'node:path';
 const PORT = Number(process.env.PORT || 3000);
 const DATA_DIR = process.env.DATA_DIR || '/data';
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
+const DEVICES_FILE = path.join(DATA_DIR, 'devices.json');
 const ALLOWED_ORIGIN = 'https://s-yasmeen.github.io';
 
 const emptyState = () => ({
@@ -39,6 +40,48 @@ async function writeState(state) {
   const tmp = STATE_FILE + '.tmp';
   await fs.writeFile(tmp, JSON.stringify(state), 'utf8');
   await fs.rename(tmp, STATE_FILE);
+}
+
+async function readDevices() {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  try {
+    const parsed = JSON.parse(await fs.readFile(DEVICES_FILE, 'utf8'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    await fs.writeFile(DEVICES_FILE, '[]', 'utf8');
+    return [];
+  }
+}
+
+async function writeDevices(devices) {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  const tmp = DEVICES_FILE + '.tmp';
+  await fs.writeFile(tmp, JSON.stringify(devices), 'utf8');
+  await fs.rename(tmp, DEVICES_FILE);
+}
+
+function cleanText(value, max = 48) {
+  return String(value || '').replace(/[<>\r\n]/g, '').trim().slice(0, max);
+}
+
+function deviceSummary(devices) {
+  const now = Date.now();
+  const activeWindow = 2 * 60 * 1000;
+  const sorted = devices.slice().sort((a, b) => Date.parse(a.firstSeen || 0) - Date.parse(b.firstSeen || 0));
+  const publicDevices = sorted.map(d => ({
+    idSuffix: String(d.deviceId || '').slice(-8),
+    deviceType: d.deviceType || 'Browser device',
+    browser: d.browser || 'Browser',
+    firstSeen: d.firstSeen || null,
+    lastSeen: d.lastSeen || null,
+    active: now - Date.parse(d.lastSeen || 0) <= activeWindow
+  }));
+  return {
+    activeCount: publicDevices.filter(d => d.active).length,
+    registeredCount: publicDevices.length,
+    activeWindowSeconds: activeWindow / 1000,
+    devices: publicDevices
+  };
 }
 
 function corsHeaders(origin) {
@@ -86,7 +129,7 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { ok: true, service: 'SilentVoiceX Sync' }, origin);
   }
 
-  if (url.pathname !== '/state') {
+  if (url.pathname !== '/state' && url.pathname !== '/devices') {
     return send(res, 404, { error: 'not_found' }, origin);
   }
 
@@ -95,6 +138,40 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    if (url.pathname === '/devices') {
+      if (req.method === 'GET') {
+        const devices = await readDevices();
+        return send(res, 200, deviceSummary(devices), origin);
+      }
+      if (req.method === 'PUT') {
+        const incoming = await readJson(req, 16 * 1024);
+        const deviceId = cleanText(incoming.deviceId, 100);
+        if (!/^[A-Za-z0-9_-]{8,100}$/.test(deviceId)) {
+          return send(res, 400, { error: 'invalid_device_id' }, origin);
+        }
+        const now = new Date().toISOString();
+        const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
+        let devices = (await readDevices()).filter(d => Date.parse(d.lastSeen || d.firstSeen || 0) >= ninetyDaysAgo);
+        const existing = devices.find(d => d.deviceId === deviceId);
+        if (existing) {
+          existing.lastSeen = now;
+          existing.deviceType = cleanText(incoming.deviceType, 48) || existing.deviceType || 'Browser device';
+          existing.browser = cleanText(incoming.browser, 48) || existing.browser || 'Browser';
+        } else {
+          devices.push({
+            deviceId,
+            deviceType: cleanText(incoming.deviceType, 48) || 'Browser device',
+            browser: cleanText(incoming.browser, 48) || 'Browser',
+            firstSeen: now,
+            lastSeen: now
+          });
+        }
+        await writeDevices(devices);
+        return send(res, 200, deviceSummary(devices), origin);
+      }
+      return send(res, 405, { error: 'method_not_allowed' }, origin);
+    }
+
     if (req.method === 'GET') {
       return send(res, 200, await readState(), origin);
     }

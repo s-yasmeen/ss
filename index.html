@@ -71,6 +71,15 @@
         <p class="note"><b>Important:</b> every participant should record the <b>same sign labels</b>. Example: P001 records HELLO, GOOD, HEART; P002 records HELLO, GOOD, HEART; P003 records HELLO, GOOD, HEART. Use P003 only as the unseen test signer.</p>
         <div class="statusRow"><span id="cloudSyncStatus" class="pill">☁ Shared AI • checking…</span></div>
         <p class="note"><b>Automatic cross-device sync:</b> training and recorded signs are saved locally first, then synchronized over the internet. Open this same SilentVoiceX link on another device and it automatically loads the newest shared training. Offline changes wait locally and sync after reconnection.</p>
+        <div style="margin-top:14px;padding:14px;border:1px solid #244560;border-radius:16px;background:#091728">
+          <div class="smallcap">CONNECTED DEVICES</div>
+          <div class="stats" style="grid-template-columns:repeat(2,1fr);margin-top:10px">
+            <div class="stat"><div id="activeDeviceCount" class="n">—</div><div class="k">ACTIVE NOW</div></div>
+            <div class="stat"><div id="registeredDeviceCount" class="n">—</div><div class="k">REGISTERED DEVICES</div></div>
+          </div>
+          <div id="deviceList" class="personSummary"><div class="personCard"><div class="pname">Devices</div><div class="pcount" style="font-size:14px">Checking…</div></div></div>
+          <p class="note" style="margin-bottom:0">A random browser ID is used to distinguish devices. No location or owner name is stored. “Active now” means the device checked in within the last 2 minutes.</p>
+        </div>
         <div id="personSummary" class="personSummary"></div><div class="recordSelectBar"><button id="selectAllRecordsBtn" class="btn ghost">☑ Select All</button><button id="clearRecordSelectionBtn" class="btn ghost">Clear Selection</button><button id="deleteRecordsBtn" class="btn ghost" disabled>Delete Selected Records</button><span id="recordSelectionStatus" class="selectionStatus">0 selected</span></div><div id="sampleLog" class="log">No samples yet.</div>
       </div>
       <div class="card trainHero">
@@ -105,6 +114,10 @@ let liveBuffer=[], currentPrediction="READY", currentConfidence=0, phrase=[], re
 let selectedRecordIndexes=new Set();
 const SEQ=24, FEAT=126, PORTABLE_BUNDLE_VERSION=1;
 const SYNC_API="https://silentvoicex-sync-api-production.up.railway.app/state";
+const DEVICE_API="https://silentvoicex-sync-api-production.up.railway.app/devices";
+const DEVICE_ID_KEY="svx-device-id";
+let DEVICE_ID=localStorage.getItem(DEVICE_ID_KEY);
+if(!DEVICE_ID){DEVICE_ID=(crypto.randomUUID?crypto.randomUUID():(Date.now().toString(36)+"-"+Math.random().toString(36).slice(2)));localStorage.setItem(DEVICE_ID_KEY,DEVICE_ID);}
 let cloudVersion=Number(localStorage.getItem("svx-cloud-version")||0), cloudBusy=false, cloudTimer=null, trainingBusy=false;
 
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab,.page").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.page).classList.add("active");updateStats()});
@@ -462,6 +475,65 @@ async function capturePortableModel(){
  if(!captured)return null;
  return {modelTopology:captured.modelTopology,weightSpecs:captured.weightSpecs||[],weightDataBase64:bufferToBase64(captured.weightData),format:captured.format||null,generatedBy:captured.generatedBy||null,convertedBy:captured.convertedBy||null,trainingConfig:captured.trainingConfig||null,userDefinedMetadata:captured.userDefinedMetadata||null};
 }
+function detectDeviceType(){
+ const ua=navigator.userAgent||"";
+ if(/Android/i.test(ua))return /Mobile/i.test(ua)?"Android phone":"Android tablet";
+ if(/iPhone/i.test(ua))return "iPhone";
+ if(/iPad/i.test(ua))return "iPad";
+ if(/Windows/i.test(ua))return "Windows computer";
+ if(/Macintosh|Mac OS X/i.test(ua))return "Mac";
+ if(/CrOS/i.test(ua))return "Chromebook";
+ if(/Linux/i.test(ua))return "Linux computer";
+ return "Browser device";
+}
+function detectBrowser(){
+ const ua=navigator.userAgent||"";
+ if(/SamsungBrowser/i.test(ua))return "Samsung Internet";
+ if(/Edg\//i.test(ua))return "Edge";
+ if(/Firefox|FxiOS/i.test(ua))return "Firefox";
+ if(/CriOS/i.test(ua))return "Chrome";
+ if(/Chrome/i.test(ua))return "Chrome";
+ if(/Safari/i.test(ua))return "Safari";
+ return "Browser";
+}
+function relativeSeen(iso){
+ const ms=Date.now()-Date.parse(iso||"");
+ if(!Number.isFinite(ms)||ms<0)return "just now";
+ const s=Math.floor(ms/1000);if(s<45)return "just now";
+ const m=Math.floor(s/60);if(m<60)return m+" min ago";
+ const h=Math.floor(m/60);if(h<24)return h+" hr"+(h===1?"":"s")+" ago";
+ const d=Math.floor(h/24);return d+" day"+(d===1?"":"s")+" ago";
+}
+function renderDevices(summary){
+ const active=$("activeDeviceCount"),registered=$("registeredDeviceCount"),list=$("deviceList");
+ if(!active||!registered||!list)return;
+ active.textContent=String(summary.activeCount??0);registered.textContent=String(summary.registeredCount??0);
+ const devices=Array.isArray(summary.devices)?summary.devices:[];
+ list.innerHTML="";
+ if(!devices.length){list.innerHTML='<div class="personCard"><div class="pname">Devices</div><div class="pcount" style="font-size:14px">No devices registered yet</div></div>';return;}
+ devices.forEach((d,i)=>{
+   const card=document.createElement("div");card.className="personCard";
+   const mine=d.idSuffix&&DEVICE_ID.endsWith(d.idSuffix);
+   const activeNow=!!d.active;
+   const title="Device "+(i+1)+(mine?" • THIS DEVICE":"");
+   const meta=(d.deviceType||"Browser device")+" • "+(d.browser||"Browser");
+   card.innerHTML='<div class="pname">'+title+'</div><div class="pcount" style="font-size:14px">'+meta+'</div><div class="note" style="margin-top:5px;color:'+(activeNow?'#88ffd3':'#9bb0c9')+'">'+(activeNow?'● Active now':'○ Last seen '+relativeSeen(d.lastSeen))+'</div>';
+   list.appendChild(card);
+ });
+}
+async function deviceHeartbeat(){
+ if(!navigator.onLine)return;
+ try{
+   const r=await fetch(DEVICE_API,{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({deviceId:DEVICE_ID,deviceType:detectDeviceType(),browser:detectBrowser()})});
+   if(!r.ok)throw new Error("device registry "+r.status);
+   renderDevices(await r.json());
+ }catch(e){console.warn("Device heartbeat",e)}
+}
+async function refreshDevices(){
+ if(!navigator.onLine)return;
+ try{const r=await fetch(DEVICE_API,{cache:"no-store"});if(r.ok)renderDevices(await r.json());}catch(e){console.warn("Device list",e)}
+}
+
 function setCloudStatus(text,on=false){
  const el=$("cloudSyncStatus");if(!el)return;el.textContent=text;el.classList.toggle("on",!!on);
 }
@@ -539,10 +611,12 @@ async function syncCloud(){
  }catch(e){console.warn(e);setCloudStatus("☁ Shared AI • will retry",false);}
  finally{cloudBusy=false;}
 }
-window.addEventListener("online",()=>syncCloud());
+window.addEventListener("online",()=>{syncCloud();deviceHeartbeat()});
 window.addEventListener("offline",()=>setCloudStatus("☁ Shared AI • offline, changes saved locally",false));
-document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncCloud()});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){syncCloud();deviceHeartbeat();}});
 setInterval(()=>{if(!document.hidden&&navigator.onLine)syncCloud()},15000);
+setInterval(()=>{if(!document.hidden&&navigator.onLine)deviceHeartbeat()},30000);
+setTimeout(()=>deviceHeartbeat(),800);
 
 function buildModel(n){
  const m=tf.sequential();
