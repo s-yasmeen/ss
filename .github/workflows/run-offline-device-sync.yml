@@ -1,0 +1,38 @@
+name: Run offline device sync patch
+
+on:
+  push:
+    paths:
+      - '.github/workflows/run-offline-device-sync.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply patch
+        run: python scripts/add_offline_device_sync.py
+      - name: Validate
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          js=s.split('<script type="module">',1)[1].split('</script>',1)[0]
+          js=js.replace('import {HandLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";','const HandLandmarker={}, FilesetResolver={}, DrawingUtils=function(){};')
+          Path('/tmp/app.mjs').write_text(js)
+          PY
+          node --check /tmp/app.mjs
+          grep -q 'Sync to Device' index.html
+          grep -q 'Receive Sync' index.html
+          grep -q 'const EPOCHS=15;' index.html
+          grep -q 'silentvoicex-build15-device-sync-v4' sw.js
+      - name: Commit
+        run: |
+          git config user.name 'SilentVoiceX Builder'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html sw.js
+          git commit -m 'Add offline cross-device sync on stable Build 15'
+          git push
