@@ -1,0 +1,42 @@
+name: Apply automatic cloud sync
+
+on:
+  push:
+    paths:
+      - 'tools/apply_cloud_sync.py'
+      - '.github/workflows/apply-cloud-sync.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply cloud sync patch
+        run: python tools/apply_cloud_sync.py
+      - name: Validate Build 15 and browser code
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          js=s.split('<script type="module">',1)[1].split('</script>',1)[0]
+          js=js.replace('import {HandLandmarker, FilesetResolver, DrawingUtils} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/+esm";','const HandLandmarker={}, FilesetResolver={}, DrawingUtils=function(){};')
+          Path('/tmp/app.mjs').write_text(js)
+          PY
+          node --check /tmp/app.mjs
+          grep -q 'BUILD 15 • AUTO SPEAK 80%' index.html
+          grep -q 'const EPOCHS=15;' index.html
+          grep -q 'Shared AI' index.html
+          grep -q 'silentvoicex-build15-cloud-sync-v5' sw.js
+          ! grep -q 'Sync to Device' index.html
+          ! grep -q 'Import Backup' index.html
+      - name: Commit automatic shared sync
+        run: |
+          git config user.name 'SilentVoiceX Builder'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html sw.js
+          git commit -m 'Enable automatic cross-device cloud sync on Build 15'
+          git push
